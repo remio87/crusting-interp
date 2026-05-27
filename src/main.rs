@@ -2,6 +2,12 @@ use std::env;
 use std::fs;
 use std::io::Write;
 use std::path::Path;
+use std::process::exit;
+use std::sync::atomic::AtomicBool;
+
+mod token_type;
+
+static HAD_ERROR: AtomicBool = AtomicBool::new(false);
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -16,8 +22,10 @@ fn main() {
 
 fn run_file(path: &Path) {
     let contents = fs::read_to_string(path).expect("Should have been able to read the file");
-    dbg!(&contents);
     run(&contents);
+    if HAD_ERROR.load(std::sync::atomic::Ordering::Relaxed) {
+        exit(65);
+    }
 }
 
 fn run_prompt() {
@@ -33,9 +41,23 @@ fn run_prompt() {
             break;
         }
         run(buf);
+        HAD_ERROR.store(false, std::sync::atomic::Ordering::Relaxed);
     }
 }
 
 fn run(code: &str) {
     println!("{}", code);
+    todo!("not implemented run yet");
+    // let scanner = Scanner::new(code);
+    // let tokens = scanner.scan_tokens();
+    // tokens.map( ... lambda to print ...)
+}
+
+fn error(line: i32, message: &str) {
+    report(line, "", message);
+}
+
+fn report(line: i32, place: &str, message: &str) {
+    eprintln!("[line {}] Error {}: {}", line, place, message);
+    HAD_ERROR.store(true, std::sync::atomic::Ordering::Relaxed);
 }
