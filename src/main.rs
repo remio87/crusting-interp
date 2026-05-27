@@ -17,7 +17,7 @@ fn main() {
 fn run_file(path: &Path) {
     let contents = fs::read_to_string(path).expect("Should have been able to read the file");
     dbg!(&contents);
-    run(contents);
+    run(&contents);
 }
 
 fn run_prompt() {
@@ -28,10 +28,14 @@ fn run_prompt() {
         std::io::stdin()
             .read_line(&mut buf)
             .expect("failed to read stdin");
-        println!("{}", buf.trim());
+        let buf = buf.trim();
+        if buf.is_empty() {
+            break;
+        }
+        run(buf);
     }
 }
 
-fn run(code: String) {
-    todo!();
+fn run(code: &str) {
+    println!("{}", code);
 }
