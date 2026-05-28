@@ -5,6 +5,7 @@ use std::path::Path;
 use std::process::exit;
 use std::sync::atomic::AtomicBool;
 
+mod token;
 mod token_type;
 
 static HAD_ERROR: AtomicBool = AtomicBool::new(false);
