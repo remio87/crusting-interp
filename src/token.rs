@@ -1,18 +1,18 @@
 use crate::token_type::TokenType;
 
 #[derive(Debug, Clone, PartialEq)]
-enum LiteralValue {
+pub enum LiteralValue {
     Number(f64),
     Str(String),
     Bool(bool),
     Nil,
 }
 
-struct Token {
-    token_type: TokenType,
-    lexeme: String,
-    literal: Option<LiteralValue>,
-    line: i32,
+pub struct Token {
+    pub token_type: TokenType,
+    pub lexeme: String,
+    pub literal: Option<LiteralValue>,
+    pub line: usize,
 }
 
 impl std::fmt::Display for Token {
