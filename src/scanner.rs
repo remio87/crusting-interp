@@ -1,8 +1,8 @@
-use crate::token::Token;
+use crate::token::{LiteralValue, Token};
 use crate::token_type::TokenType;
 
 struct Scanner {
-    source: String,
+    source: Vec<char>,
     tokens: Vec<Token>,
     start: usize,
     current: usize,
@@ -12,7 +12,7 @@ struct Scanner {
 impl Scanner {
     fn new(source: String) -> Self {
         Scanner {
-            source,
+            source: source.chars().collect(),
             tokens: Vec::new(),
             start: 0,
             current: 0,
@@ -23,7 +23,7 @@ impl Scanner {
     fn scan_tokens(&mut self) {
         while !self.is_at_end() {
             self.start = self.current;
-            self.scan_tokens();
+            self.scan_token();
         }
         self.tokens.push(Token {
             token_type: TokenType::Eof,
@@ -35,5 +35,43 @@ impl Scanner {
 
     fn is_at_end(&self) -> bool {
         self.current >= self.source.len()
+    }
+
+    fn scan_token(&mut self) {
+        let c = self.advance();
+        match c {
+            Some('(') => self.add_token(TokenType::LeftParen),
+            Some(')') => self.add_token(TokenType::RightParen),
+            Some('{') => self.add_token(TokenType::LeftBrace),
+            Some('}') => self.add_token(TokenType::RightBrace),
+            Some(',') => self.add_token(TokenType::Comma),
+            Some('.') => self.add_token(TokenType::Dot),
+            Some('-') => self.add_token(TokenType::Minus),
+            Some('+') => self.add_token(TokenType::Plus),
+            Some(';') => self.add_token(TokenType::Semicolon),
+            Some('*') => self.add_token(TokenType::Star),
+            Some(c) => eprintln!("Unexpected character: {}", c),
+            None => unreachable!("No more characters to scan"),
+        }
+    }
+
+    fn advance(&mut self) -> Option<char> {
+        let c = self.source.get(self.current).copied();
+        self.current += 1;
+        c
+    }
+
+    fn add_token(&mut self, token_type: TokenType) {
+        self.add_token_with_literal(token_type, None)
+    }
+
+    fn add_token_with_literal(&mut self, token_type: TokenType, literal: Option<LiteralValue>) {
+        let text = self.source[self.start..self.current].iter().collect();
+        self.tokens.push(Token {
+            token_type,
+            lexeme: text,
+            literal,
+            line: self.line,
+        });
     }
 }
