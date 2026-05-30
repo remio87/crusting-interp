@@ -96,9 +96,30 @@ impl Scanner {
             Some('\t') => {}
             Some('\n') => self.line += 1,
             Some('"') => self.string(),
+            Some(c) if Scanner::is_digit(c) => self.number(),
             Some(c) => crate::error(self.line, &format!("Unexpected character: {}", c)),
             None => unreachable!("No more characters to scan"),
         }
+    }
+
+    fn number(&mut self) {
+        while Scanner::is_digit(self.peek()) {
+            self.advance();
+        }
+        // handle fractional part
+        if self.peek() == '.' && self.peek_next().is_digit(10) {
+            // consume "."
+            self.advance();
+            while Scanner::is_digit(self.peek()) {
+                self.advance();
+            }
+        }
+        let num = self.source[self.start..self.current]
+            .iter()
+            .collect::<String>()
+            .parse::<f64>()
+            .expect("failed to parse numeric literal");
+        self.add_token_with_literal(TokenType::Number, Some(LiteralValue::Number(num)));
     }
 
     fn string(&mut self) {
@@ -141,6 +162,18 @@ impl Scanner {
         } else {
             self.source[self.current]
         }
+    }
+
+    fn peek_next(&self) -> char {
+        if self.current + 1 >= self.source.len() {
+            '\0'
+        } else {
+            self.source[self.current + 1]
+        }
+    }
+
+    fn is_digit(c: char) -> bool {
+        c.is_digit(10)
     }
 
     fn advance(&mut self) -> Option<char> {
