@@ -95,9 +95,32 @@ impl Scanner {
             Some('\r') => {}
             Some('\t') => {}
             Some('\n') => self.line += 1,
+            Some('"') => self.string(),
             Some(c) => crate::error(self.line, &format!("Unexpected character: {}", c)),
             None => unreachable!("No more characters to scan"),
         }
+    }
+
+    fn string(&mut self) {
+        // find closing double quotation position
+        while self.peek() != '"' && !self.is_at_end() {
+            if self.peek() == '\n' {
+                self.line += 1;
+            }
+            self.advance();
+        }
+        // no closing found
+        if self.is_at_end() {
+            crate::error(self.line, "Unterminated string");
+            return;
+        }
+        // the closing "
+        self.advance();
+        // add token with literal value. note that quotations are excluded.
+        let value: String = self.source[(self.start + 1)..(self.current - 1)]
+            .iter()
+            .collect();
+        self.add_token_with_literal(TokenType::String, Some(LiteralValue::Str(value)));
     }
 
     fn match_char(&mut self, expected: char) -> bool {
