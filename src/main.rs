@@ -51,7 +51,7 @@ fn run_prompt() {
 fn run(code: &str) {
     let mut scanner = Scanner::new(code);
     scanner.scan_tokens();
-    let tokens = scanner.tokens;
+    let tokens = scanner.into_tokens();
     let tokens = tokens
         .into_iter()
         .map(|tok| format!("{}", tok))

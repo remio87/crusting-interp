@@ -2,11 +2,11 @@ use crate::token::{LiteralValue, Token};
 use crate::token_type::TokenType;
 
 pub struct Scanner {
-    pub source: Vec<char>,
-    pub tokens: Vec<Token>,
-    pub start: usize,
-    pub current: usize,
-    pub line: usize,
+    source: Vec<char>,
+    tokens: Vec<Token>,
+    start: usize,
+    current: usize,
+    line: usize,
 }
 
 impl Scanner {
@@ -18,6 +18,10 @@ impl Scanner {
             current: 0,
             line: 1,
         }
+    }
+
+    pub fn into_tokens(self) -> Vec<Token> {
+        self.tokens
     }
 
     pub fn scan_tokens(&mut self) {
@@ -92,7 +96,6 @@ impl Scanner {
             Some('\t') => {}
             Some('\n') => self.line += 1,
             Some(c) => crate::error(self.line, &format!("Unexpected character: {}", c)),
-            // Some(c) => eprintln!("Unexpected character: {} line: {}", c, self.line),
             None => unreachable!("No more characters to scan"),
         }
     }
