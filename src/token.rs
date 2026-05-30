@@ -17,15 +17,10 @@ pub struct Token {
 
 impl std::fmt::Display for Token {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{:?} {} {}",
-            self.token_type,
-            self.lexeme,
-            match &self.literal {
-                Some(literal) => format!("{:?}", literal),
-                None => "null".to_string(),
-            }
-        )
+        write!(f, "{:?} {} ", self.token_type, self.lexeme)?;
+        match &self.literal {
+            Some(literal) => write!(f, "{:?}", literal),
+            None => write!(f, "{}", "null"),
+        }
     }
 }
