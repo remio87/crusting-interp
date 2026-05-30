@@ -50,8 +50,48 @@ impl Scanner {
             Some('+') => self.add_token(TokenType::Plus),
             Some(';') => self.add_token(TokenType::Semicolon),
             Some('*') => self.add_token(TokenType::Star),
-            Some(c) => eprintln!("Unexpected character: {}", c),
+            Some('!') => {
+                if self.match_char('=') {
+                    self.add_token(TokenType::BangEqual);
+                } else {
+                    self.add_token(TokenType::Bang);
+                }
+            }
+            Some('=') => {
+                if self.match_char('=') {
+                    self.add_token(TokenType::EqualEqual);
+                } else {
+                    self.add_token(TokenType::Equal);
+                }
+            }
+            Some('<') => {
+                if self.match_char('=') {
+                    self.add_token(TokenType::LessEqual);
+                } else {
+                    self.add_token(TokenType::Less);
+                }
+            }
+            Some('>') => {
+                if self.match_char('=') {
+                    self.add_token(TokenType::GreaterEqual);
+                } else {
+                    self.add_token(TokenType::Greater);
+                }
+            }
+            Some(c) => eprintln!("Unexpected character: {} line: {}", c, self.line),
             None => unreachable!("No more characters to scan"),
+        }
+    }
+
+    fn match_char(&mut self, expected: char) -> bool {
+        if self.is_at_end() {
+            return false;
+        }
+        if expected == self.source[self.current] {
+            self.current += 1;
+            return true;
+        } else {
+            return false;
         }
     }
 
