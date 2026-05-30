@@ -1,16 +1,16 @@
 use crate::token::{LiteralValue, Token};
 use crate::token_type::TokenType;
 
-struct Scanner {
-    source: Vec<char>,
-    tokens: Vec<Token>,
-    start: usize,
-    current: usize,
-    line: usize,
+pub struct Scanner {
+    pub source: Vec<char>,
+    pub tokens: Vec<Token>,
+    pub start: usize,
+    pub current: usize,
+    pub line: usize,
 }
 
 impl Scanner {
-    fn new(source: String) -> Self {
+    pub fn new(source: &str) -> Self {
         Scanner {
             source: source.chars().collect(),
             tokens: Vec::new(),
@@ -20,7 +20,7 @@ impl Scanner {
         }
     }
 
-    fn scan_tokens(&mut self) {
+    pub fn scan_tokens(&mut self) {
         while !self.is_at_end() {
             self.start = self.current;
             self.scan_token();
@@ -78,7 +78,21 @@ impl Scanner {
                     self.add_token(TokenType::Greater);
                 }
             }
-            Some(c) => eprintln!("Unexpected character: {} line: {}", c, self.line),
+            Some('/') => {
+                if self.match_char('/') {
+                    while self.peek() != '\n' && !self.is_at_end() {
+                        self.advance();
+                    }
+                } else {
+                    self.add_token(TokenType::Slash);
+                }
+            }
+            Some(' ') => {}
+            Some('\r') => {}
+            Some('\t') => {}
+            Some('\n') => self.line += 1,
+            Some(c) => crate::error(self.line, &format!("Unexpected character: {}", c)),
+            // Some(c) => eprintln!("Unexpected character: {} line: {}", c, self.line),
             None => unreachable!("No more characters to scan"),
         }
     }
@@ -89,9 +103,17 @@ impl Scanner {
         }
         if expected == self.source[self.current] {
             self.current += 1;
-            return true;
+            true
         } else {
-            return false;
+            false
+        }
+    }
+
+    fn peek(&self) -> char {
+        if self.is_at_end() {
+            '\0'
+        } else {
+            self.source[self.current]
         }
     }
 
