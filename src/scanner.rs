@@ -1,5 +1,29 @@
 use crate::token::{LiteralValue, Token};
 use crate::token_type::TokenType;
+use std::collections::HashMap;
+use std::sync::LazyLock;
+
+static KEYWORDS: LazyLock<HashMap<&'static str, TokenType>> = LazyLock::new(|| {
+    let keywords = [
+        ("and", TokenType::And),
+        ("class", TokenType::Class),
+        ("else", TokenType::Else),
+        ("false", TokenType::False),
+        ("for", TokenType::For),
+        ("fun", TokenType::Fun),
+        ("if", TokenType::If),
+        ("nil", TokenType::Nil),
+        ("or", TokenType::Or),
+        ("print", TokenType::Print),
+        ("return", TokenType::Return),
+        ("super", TokenType::Super),
+        ("this", TokenType::This),
+        ("true", TokenType::True),
+        ("var", TokenType::Var),
+        ("while", TokenType::While),
+    ];
+    keywords.into_iter().collect()
+});
 
 pub struct Scanner {
     source: Vec<char>,
@@ -97,6 +121,7 @@ impl Scanner {
             Some('\n') => self.line += 1,
             Some('"') => self.string(),
             Some(c) if Scanner::is_digit(c) => self.number(),
+            Some(c) if Scanner::is_alpha(c) => self.identifier(),
             Some(c) => crate::error(self.line, &format!("Unexpected character: {}", c)),
             None => unreachable!("No more characters to scan"),
         }
@@ -120,6 +145,18 @@ impl Scanner {
             .parse::<f64>()
             .expect("failed to parse numeric literal");
         self.add_token_with_literal(TokenType::Number, Some(LiteralValue::Number(num)));
+    }
+
+    fn identifier(&mut self) {
+        while Scanner::is_alpha_numeric(self.peek()) {
+            self.advance();
+        }
+        let text: String = self.source[self.start..self.current].iter().collect();
+        let token_type = KEYWORDS.get(text.as_str()).copied();
+        match token_type {
+            Some(tt) => self.add_token(tt),
+            None => self.add_token(TokenType::Identifier),
+        }
     }
 
     fn string(&mut self) {
@@ -174,6 +211,14 @@ impl Scanner {
 
     fn is_digit(c: char) -> bool {
         c.is_digit(10)
+    }
+
+    fn is_alpha(c: char) -> bool {
+        (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c == '_')
+    }
+
+    fn is_alpha_numeric(c: char) -> bool {
+        Scanner::is_alpha(c) || Scanner::is_digit(c)
     }
 
     fn advance(&mut self) -> Option<char> {
