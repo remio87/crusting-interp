@@ -8,6 +8,21 @@ pub enum LiteralValue {
     Nil,
 }
 
+impl std::fmt::Display for LiteralValue {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                LiteralValue::Number(num) => num.to_string(),
+                LiteralValue::Str(s) => s.to_string(),
+                LiteralValue::Bool(b) => b.to_string(),
+                LiteralValue::Nil => "nil".to_string(),
+            }
+        )
+    }
+}
+
 pub struct Token {
     pub token_type: TokenType,
     pub lexeme: String,
