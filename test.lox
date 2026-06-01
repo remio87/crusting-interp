@@ -1,0 +1,8 @@
+// this is a comment
+(( )){} // grouping stuff
+!*+-/=<> <= == // operators
+"I am string literal!!" // string literal
+42 // num literal
+42.123 // also num literal
+and or andersen hoge _hoge piyo_piyo piyo123 // keywords and identifier
+123hoge // num and ident
