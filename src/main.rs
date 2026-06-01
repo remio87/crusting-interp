@@ -2,6 +2,7 @@ mod expr;
 mod scanner;
 mod token;
 mod token_type;
+mod parser;
 
 use scanner::Scanner;
 use std::env;

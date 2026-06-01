@@ -1,6 +1,6 @@
 use crate::token::{LiteralValue, Token};
 
-enum Expr {
+pub enum Expr {
     Binary {
         left: Box<Expr>,
         operator: Token,
