@@ -17,8 +17,19 @@ impl Parser {
     }
 
     fn equality(&mut self) -> Expr {
-        let expr = self.comparison();
-        todo!()
+        let mut expr = self.comparison();
+
+        while self.match_expr(&[TokenType::BangEqual, TokenType::EqualEqual]) {
+            let operator = self.previous().clone();
+            let right = self.comparison();
+            expr = Expr::Binary {
+                left: Box::new(expr),
+                operator,
+                right: Box::new(right),
+            };
+        }
+
+        expr
     }
 
     fn comparison(&mut self) -> Expr {
@@ -26,13 +37,39 @@ impl Parser {
     }
 
     fn match_expr(&mut self, types: &[TokenType]) -> bool {
-        // todo: impl check and advance
         for tt in types {
-            if self.check(tt) {
+            if self.check(*tt) {
                 self.advance();
                 return true;
             }
         }
-        return false;
+        false
+    }
+
+    fn check(&self, token_type: TokenType) -> bool {
+        if self.is_at_end() {
+            false
+        } else {
+            self.peek().token_type == token_type
+        }
+    }
+
+    fn advance(&mut self) -> &Token {
+        if !self.is_at_end() {
+            self.current += 1;
+        }
+        self.previous()
+    }
+
+    fn is_at_end(&self) -> bool {
+        self.peek().token_type == TokenType::Eof
+    }
+
+    fn peek(&self) -> &Token {
+        &self.tokens[self.current]
+    }
+
+    fn previous(&self) -> &Token {
+        &self.tokens[self.current - 1]
     }
 }

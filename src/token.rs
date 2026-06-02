@@ -23,6 +23,7 @@ impl std::fmt::Display for LiteralValue {
     }
 }
 
+#[derive(Clone)]
 pub struct Token {
     pub token_type: TokenType,
     pub lexeme: String,
