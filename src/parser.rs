@@ -1,5 +1,5 @@
 use crate::expr::Expr;
-use crate::token::Token;
+use crate::token::{LiteralValue, Token};
 use crate::token_type::TokenType;
 
 struct Parser {
@@ -33,7 +33,107 @@ impl Parser {
     }
 
     fn comparison(&mut self) -> Expr {
-        todo!()
+        let mut expr = self.term();
+
+        while self.match_expr(&[
+            TokenType::Greater,
+            TokenType::GreaterEqual,
+            TokenType::Less,
+            TokenType::LessEqual,
+        ]) {
+            let operator = self.previous().clone();
+            let right = self.term();
+            expr = Expr::Binary {
+                left: Box::new(expr),
+                operator,
+                right: Box::new(right),
+            };
+        }
+
+        expr
+    }
+
+    fn term(&mut self) -> Expr {
+        let mut expr = self.factor();
+
+        while self.match_expr(&[TokenType::Plus, TokenType::Minus]) {
+            let operator = self.previous().clone();
+            let right = self.factor();
+            expr = Expr::Binary {
+                left: Box::new(expr),
+                operator,
+                right: Box::new(right),
+            };
+        }
+
+        expr
+    }
+
+    fn factor(&mut self) -> Expr {
+        let mut expr = self.unary();
+
+        while self.match_expr(&[TokenType::Star, TokenType::Slash]) {
+            let operator = self.previous().clone();
+            let right = self.unary();
+            expr = Expr::Binary {
+                left: Box::new(expr),
+                operator: operator,
+                right: Box::new(right),
+            };
+        }
+
+        expr
+    }
+
+    fn unary(&mut self) -> Expr {
+        if self.match_expr(&[TokenType::Bang, TokenType::Minus]) {
+            let operator = self.previous().clone();
+            let right = self.unary();
+            Expr::Unary {
+                operator,
+                right: Box::new(right),
+            }
+        } else {
+            self.primary()
+        }
+    }
+
+    fn primary(&mut self) -> Expr {
+        match self.peek().token_type {
+            TokenType::False => {
+                self.advance();
+                Expr::Literal {
+                    value: LiteralValue::Bool(false),
+                }
+            }
+            TokenType::True => {
+                self.advance();
+                Expr::Literal {
+                    value: LiteralValue::Bool(true),
+                }
+            }
+            TokenType::Nil => {
+                self.advance();
+                Expr::Literal {
+                    value: LiteralValue::Nil,
+                }
+            }
+            TokenType::Number | TokenType::String => {
+                self.advance();
+                Expr::Literal {
+                    value: self.previous().literal.expect("Literal value must be Some"),
+                }
+            }
+            TokenType::LeftParen => {
+                self.advance();
+                let expr = self.expression();
+                self.consume(TokenType::RightParen, "Expect ')' after expression");
+                Expr::Grouping {
+                    expression: Box::new(expr),
+                }
+            }
+            _ => panic!("Unexpected token"),
+        }
     }
 
     fn match_expr(&mut self, types: &[TokenType]) -> bool {
