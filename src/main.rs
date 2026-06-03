@@ -1,8 +1,8 @@
 mod expr;
+mod parser;
 mod scanner;
 mod token;
 mod token_type;
-mod parser;
 
 use scanner::Scanner;
 use std::env;
@@ -11,6 +11,10 @@ use std::io::Write;
 use std::path::Path;
 use std::process::exit;
 use std::sync::atomic::AtomicBool;
+
+use crate::parser::Parser;
+use crate::token::Token;
+use crate::token_type::TokenType;
 
 static HAD_ERROR: AtomicBool = AtomicBool::new(false);
 
@@ -54,12 +58,18 @@ fn run(code: &str) {
     let mut scanner = Scanner::new(code);
     scanner.scan_tokens();
     let tokens = scanner.into_tokens();
-    let tokens = tokens
-        .into_iter()
-        .map(|tok| format!("{}", tok))
-        .collect::<Vec<_>>()
-        .join(", ");
-    println!("{}", tokens);
+    // let tokens = tokens
+    //     .into_iter()
+    //     .map(|tok| format!("{}", tok))
+    //     .collect::<Vec<_>>()
+    //     .join(", ");
+    // println!("{}", tokens);
+    let parser = Parser::new(tokens);
+    let expression = parser.parse();
+    if HAD_ERROR.load(std::sync::atomic::Ordering::Relaxed) {
+        return;
+    }
+    println!("{}", expression);
 }
 
 fn error(line: usize, message: &str) {
@@ -69,4 +79,11 @@ fn error(line: usize, message: &str) {
 fn report(line: usize, place: &str, message: &str) {
     eprintln!("[line {}] Error {}: {}", line, place, message);
     HAD_ERROR.store(true, std::sync::atomic::Ordering::Relaxed);
+}
+
+fn error_with_token(token: &Token, message: &str) {
+    match token.token_type {
+        TokenType::Eof => report(token.line, " at end", message),
+        _ => report(token.line, &format!(" at '{}'", token.lexeme), message),
+    }
 }

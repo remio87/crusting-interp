@@ -2,26 +2,37 @@ use crate::expr::Expr;
 use crate::token::{LiteralValue, Token};
 use crate::token_type::TokenType;
 
-struct Parser {
+#[derive(Debug)]
+struct ParseError {
+    msg: String,
+}
+
+pub type ParseResult = Result<Expr, ParseError>;
+
+pub struct Parser {
     tokens: Vec<Token>,
     current: usize,
 }
 
 impl Parser {
-    fn new(tokens: Vec<Token>) -> Self {
+    pub fn new(tokens: Vec<Token>) -> Self {
         Parser { tokens, current: 0 }
     }
 
-    fn expression(&mut self) -> Expr {
+    pub fn parse(mut self) -> Expr {
+        self.expression().expect("Failed to parse!!")
+    }
+
+    fn expression(&mut self) -> ParseResult {
         self.equality()
     }
 
-    fn equality(&mut self) -> Expr {
-        let mut expr = self.comparison();
+    fn equality(&mut self) -> ParseResult {
+        let mut expr = self.comparison()?;
 
         while self.match_expr(&[TokenType::BangEqual, TokenType::EqualEqual]) {
             let operator = self.previous().clone();
-            let right = self.comparison();
+            let right = self.comparison()?;
             expr = Expr::Binary {
                 left: Box::new(expr),
                 operator,
@@ -29,11 +40,11 @@ impl Parser {
             };
         }
 
-        expr
+        Ok(expr)
     }
 
-    fn comparison(&mut self) -> Expr {
-        let mut expr = self.term();
+    fn comparison(&mut self) -> ParseResult {
+        let mut expr = self.term()?;
 
         while self.match_expr(&[
             TokenType::Greater,
@@ -42,7 +53,7 @@ impl Parser {
             TokenType::LessEqual,
         ]) {
             let operator = self.previous().clone();
-            let right = self.term();
+            let right = self.term()?;
             expr = Expr::Binary {
                 left: Box::new(expr),
                 operator,
@@ -50,15 +61,15 @@ impl Parser {
             };
         }
 
-        expr
+        Ok(expr)
     }
 
-    fn term(&mut self) -> Expr {
-        let mut expr = self.factor();
+    fn term(&mut self) -> ParseResult {
+        let mut expr = self.factor()?;
 
         while self.match_expr(&[TokenType::Plus, TokenType::Minus]) {
             let operator = self.previous().clone();
-            let right = self.factor();
+            let right = self.factor()?;
             expr = Expr::Binary {
                 left: Box::new(expr),
                 operator,
@@ -66,15 +77,15 @@ impl Parser {
             };
         }
 
-        expr
+        Ok(expr)
     }
 
-    fn factor(&mut self) -> Expr {
-        let mut expr = self.unary();
+    fn factor(&mut self) -> ParseResult {
+        let mut expr = self.unary()?;
 
         while self.match_expr(&[TokenType::Star, TokenType::Slash]) {
             let operator = self.previous().clone();
-            let right = self.unary();
+            let right = self.unary()?;
             expr = Expr::Binary {
                 left: Box::new(expr),
                 operator: operator,
@@ -82,57 +93,61 @@ impl Parser {
             };
         }
 
-        expr
+        Ok(expr)
     }
 
-    fn unary(&mut self) -> Expr {
+    fn unary(&mut self) -> ParseResult {
         if self.match_expr(&[TokenType::Bang, TokenType::Minus]) {
             let operator = self.previous().clone();
-            let right = self.unary();
-            Expr::Unary {
+            let right = self.unary()?;
+            Ok(Expr::Unary {
                 operator,
                 right: Box::new(right),
-            }
+            })
         } else {
             self.primary()
         }
     }
 
-    fn primary(&mut self) -> Expr {
+    fn primary(&mut self) -> ParseResult {
         match self.peek().token_type {
             TokenType::False => {
                 self.advance();
-                Expr::Literal {
+                Ok(Expr::Literal {
                     value: LiteralValue::Bool(false),
-                }
+                })
             }
             TokenType::True => {
                 self.advance();
-                Expr::Literal {
+                Ok(Expr::Literal {
                     value: LiteralValue::Bool(true),
-                }
+                })
             }
             TokenType::Nil => {
                 self.advance();
-                Expr::Literal {
+                Ok(Expr::Literal {
                     value: LiteralValue::Nil,
-                }
+                })
             }
             TokenType::Number | TokenType::String => {
                 self.advance();
-                Expr::Literal {
-                    value: self.previous().literal.expect("Literal value must be Some"),
-                }
+                Ok(Expr::Literal {
+                    value: self
+                        .previous()
+                        .literal
+                        .clone()
+                        .expect("Literal value must be Some"),
+                })
             }
             TokenType::LeftParen => {
                 self.advance();
-                let expr = self.expression();
-                self.consume(TokenType::RightParen, "Expect ')' after expression");
-                Expr::Grouping {
-                    expression: Box::new(expr),
-                }
+                let expr = self.expression()?;
+                self.consume(TokenType::RightParen, "Expect ')' after expression")
+                    .map(|_| Expr::Grouping {
+                        expression: Box::new(expr),
+                    })
             }
-            _ => panic!("Unexpected token"),
+            _ => Err(Self::error(self.peek(), "Expect expression.")),
         }
     }
 
@@ -144,6 +159,14 @@ impl Parser {
             }
         }
         false
+    }
+
+    fn consume(&mut self, token_type: TokenType, message: &str) -> Result<&Token, ParseError> {
+        if self.check(token_type) {
+            Ok(self.advance())
+        } else {
+            Err(Self::error(self.peek(), message))
+        }
     }
 
     fn check(&self, token_type: TokenType) -> bool {
@@ -171,5 +194,36 @@ impl Parser {
 
     fn previous(&self) -> &Token {
         &self.tokens[self.current - 1]
+    }
+
+    fn error(token: &Token, message: &str) -> ParseError {
+        crate::error_with_token(token, message);
+        ParseError {
+            msg: message.to_string(),
+        }
+    }
+
+    fn synchronize(&mut self) {
+        self.advance();
+
+        while !self.is_at_end() {
+            if self.previous().token_type == TokenType::Semicolon {
+                return;
+            }
+
+            match self.peek().token_type {
+                TokenType::Class => return,
+                TokenType::Fun => return,
+                TokenType::Var => return,
+                TokenType::For => return,
+                TokenType::If => return,
+                TokenType::While => return,
+                TokenType::Print => return,
+                TokenType::Return => return,
+                _ => {}
+            }
+
+            self.advance();
+        }
     }
 }
