@@ -28,20 +28,16 @@ impl std::fmt::Display for Expr {
             } => write!(
                 f,
                 "{}",
-                parenthesize(&operator.lexeme, &vec![left.as_ref(), right.as_ref()])
+                parenthesize(&operator.lexeme, &[left.as_ref(), right.as_ref()])
             ),
             Expr::Grouping { expression } => {
-                write!(f, "{}", parenthesize("group", &vec![expression.as_ref()]))
+                write!(f, "{}", parenthesize("group", &[expression.as_ref()]))
             }
             Expr::Literal { value } => {
-                write!(f, "{}", value.to_string())
+                write!(f, "{}", value)
             }
             Expr::Unary { operator, right } => {
-                write!(
-                    f,
-                    "{}",
-                    parenthesize(&operator.lexeme, &vec![right.as_ref()])
-                )
+                write!(f, "{}", parenthesize(&operator.lexeme, &[right.as_ref()]))
             }
         }
     }

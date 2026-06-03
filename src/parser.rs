@@ -96,7 +96,7 @@ impl Parser {
             let right = self.unary()?;
             expr = Expr::Binary {
                 left: Box::new(expr),
-                operator: operator,
+                operator,
                 right: Box::new(right),
             };
         }

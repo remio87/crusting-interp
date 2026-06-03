@@ -36,7 +36,7 @@ impl std::fmt::Display for Token {
         write!(f, "{:?} {} ", self.token_type, self.lexeme)?;
         match &self.literal {
             Some(literal) => write!(f, "{:?}", literal),
-            None => write!(f, "{}", "null"),
+            None => write!(f, "null"),
         }
     }
 }

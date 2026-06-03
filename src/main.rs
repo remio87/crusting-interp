@@ -67,7 +67,6 @@ fn run(code: &str) {
         Ok(expression) => println!("{}", expression),
         Err(e) => {
             eprintln!("{}", e);
-            return;
         }
     }
 }

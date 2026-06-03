@@ -132,7 +132,7 @@ impl Scanner {
             self.advance();
         }
         // handle fractional part
-        if self.peek() == '.' && self.peek_next().is_digit(10) {
+        if self.peek() == '.' && self.peek_next().is_ascii_digit() {
             // consume "."
             self.advance();
             while Scanner::is_digit(self.peek()) {
@@ -210,11 +210,11 @@ impl Scanner {
     }
 
     fn is_digit(c: char) -> bool {
-        c.is_digit(10)
+        c.is_ascii_digit()
     }
 
     fn is_alpha(c: char) -> bool {
-        (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c == '_')
+        c.is_ascii_lowercase() || c.is_ascii_uppercase() || (c == '_')
     }
 
     fn is_alpha_numeric(c: char) -> bool {
