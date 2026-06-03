@@ -3,9 +3,17 @@ use crate::token::{LiteralValue, Token};
 use crate::token_type::TokenType;
 
 #[derive(Debug)]
-struct ParseError {
+pub struct ParseError {
     msg: String,
 }
+
+impl std::fmt::Display for ParseError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Parse error: {}", self.msg)
+    }
+}
+
+impl std::error::Error for ParseError {}
 
 pub type ParseResult = Result<Expr, ParseError>;
 
@@ -19,8 +27,8 @@ impl Parser {
         Parser { tokens, current: 0 }
     }
 
-    pub fn parse(mut self) -> Expr {
-        self.expression().expect("Failed to parse!!")
+    pub fn parse(mut self) -> ParseResult {
+        self.expression()
     }
 
     fn expression(&mut self) -> ParseResult {
@@ -197,9 +205,12 @@ impl Parser {
     }
 
     fn error(token: &Token, message: &str) -> ParseError {
-        crate::error_with_token(token, message);
+        let place = match token.token_type {
+            TokenType::Eof => "at end".to_string(),
+            _ => format!("at '{}'", token.lexeme),
+        };
         ParseError {
-            msg: message.to_string(),
+            msg: format!("[line {}] Error {}: {}", token.line, place, message),
         }
     }
 
