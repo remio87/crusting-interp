@@ -25,13 +25,47 @@ static KEYWORDS: LazyLock<HashMap<&'static str, TokenType>> = LazyLock::new(|| {
     keywords.into_iter().collect()
 });
 
+#[derive(Debug)]
+struct ScanError {
+    line: usize,
+    msg: String,
+}
+
+impl std::fmt::Display for ScanError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "[line {}] Error: {}", self.line, self.msg)
+    }
+}
+
+#[derive(Debug)]
+pub struct ScanErrors(Vec<ScanError>);
+
+impl std::fmt::Display for ScanErrors {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            self.0
+                .iter()
+                .map(|e| e.to_string())
+                .collect::<Vec<_>>()
+                .join("\n")
+        )
+    }
+}
+
+impl std::error::Error for ScanErrors {}
+
 pub struct Scanner {
     source: Vec<char>,
     tokens: Vec<Token>,
     start: usize,
     current: usize,
     line: usize,
+    errors: Vec<ScanError>,
 }
+
+type ScanResult = Result<Vec<Token>, ScanErrors>;
 
 impl Scanner {
     pub fn new(source: &str) -> Self {
@@ -41,11 +75,16 @@ impl Scanner {
             start: 0,
             current: 0,
             line: 1,
+            errors: Vec::new(),
         }
     }
 
-    pub fn into_tokens(self) -> Vec<Token> {
-        self.tokens
+    pub fn into_tokens(self) -> ScanResult {
+        if self.errors.is_empty() {
+            Ok(self.tokens)
+        } else {
+            Err(ScanErrors(self.errors))
+        }
     }
 
     pub fn scan_tokens(&mut self) {
@@ -122,7 +161,7 @@ impl Scanner {
             Some('"') => self.string(),
             Some(c) if Scanner::is_digit(c) => self.number(),
             Some(c) if Scanner::is_alpha(c) => self.identifier(),
-            Some(c) => crate::error(self.line, &format!("Unexpected character: {}", c)),
+            Some(c) => self.error(self.line, &format!("Unexpected character: {}", c)),
             None => unreachable!("No more characters to scan"),
         }
     }
@@ -169,7 +208,7 @@ impl Scanner {
         }
         // no closing found
         if self.is_at_end() {
-            crate::error(self.line, "Unterminated string");
+            self.error(self.line, "Unterminated string");
             return;
         }
         // the closing "
@@ -238,6 +277,13 @@ impl Scanner {
             lexeme: text,
             literal,
             line: self.line,
+        });
+    }
+
+    fn error(&mut self, line: usize, msg: &str) {
+        self.errors.push(ScanError {
+            line,
+            msg: msg.to_string(),
         });
     }
 }

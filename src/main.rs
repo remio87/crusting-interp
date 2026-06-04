@@ -6,15 +6,13 @@ mod token_type;
 
 use scanner::Scanner;
 use std::env;
+use std::error::Error;
 use std::fs;
 use std::io::Write;
 use std::path::Path;
 use std::process::exit;
-use std::sync::atomic::AtomicBool;
 
 use crate::parser::Parser;
-
-static HAD_ERROR: AtomicBool = AtomicBool::new(false);
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -29,8 +27,8 @@ fn main() {
 
 fn run_file(path: &Path) {
     let contents = fs::read_to_string(path).expect("Should have been able to read the file");
-    run(&contents);
-    if HAD_ERROR.load(std::sync::atomic::Ordering::Relaxed) {
+    if let Err(e) = run(&contents) {
+        eprintln!("{}", e);
         exit(65);
     }
 }
@@ -47,35 +45,18 @@ fn run_prompt() {
         if buf.is_empty() {
             break;
         }
-        run(buf);
-        HAD_ERROR.store(false, std::sync::atomic::Ordering::Relaxed);
-    }
-}
-
-fn run(code: &str) {
-    let mut scanner = Scanner::new(code);
-    scanner.scan_tokens();
-    let tokens = scanner.into_tokens();
-    // let tokens = tokens
-    //     .into_iter()
-    //     .map(|tok| format!("{}", tok))
-    //     .collect::<Vec<_>>()
-    //     .join(", ");
-    // println!("{}", tokens);
-    let parser = Parser::new(tokens);
-    match parser.parse() {
-        Ok(expression) => println!("{}", expression),
-        Err(e) => {
-            eprintln!("{}", e);
+        if let Err(e) = run(buf) {
+            eprintln!("{}", e)
         }
     }
 }
 
-fn error(line: usize, message: &str) {
-    report(line, "", message);
-}
-
-fn report(line: usize, place: &str, message: &str) {
-    eprintln!("[line {}] Error {}: {}", line, place, message);
-    HAD_ERROR.store(true, std::sync::atomic::Ordering::Relaxed);
+fn run(code: &str) -> Result<(), Box<dyn Error>> {
+    let mut scanner = Scanner::new(code);
+    scanner.scan_tokens();
+    let tokens = scanner.into_tokens()?;
+    let parser = Parser::new(tokens);
+    let expression = parser.parse()?;
+    println!("{}", expression);
+    Ok(())
 }
