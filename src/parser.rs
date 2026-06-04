@@ -4,12 +4,25 @@ use crate::token_type::TokenType;
 
 #[derive(Debug)]
 pub struct ParseError {
+    token: Token,
     msg: String,
 }
 
 impl std::fmt::Display for ParseError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Parse error: {}", self.msg)
+        // write!(f, "Parse error: {}", self.msg)
+        match self.token.token_type {
+            TokenType::Eof => {
+                write!(f, "[line {}] Error at end: {}", self.token.line, self.msg)
+            }
+            _ => {
+                write!(
+                    f,
+                    "[line {}] Error at {}: {}",
+                    self.token.line, self.token.lexeme, self.msg
+                )
+            }
+        }
     }
 }
 
@@ -205,12 +218,9 @@ impl Parser {
     }
 
     fn error(token: &Token, message: &str) -> ParseError {
-        let place = match token.token_type {
-            TokenType::Eof => "at end".to_string(),
-            _ => format!("at '{}'", token.lexeme),
-        };
         ParseError {
-            msg: format!("[line {}] Error {}: {}", token.line, place, message),
+            token: token.clone(),
+            msg: message.to_string(),
         }
     }
 
