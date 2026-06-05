@@ -1,8 +1,10 @@
 mod expr;
+mod interpreter;
 mod parser;
 mod scanner;
 mod token;
 mod token_type;
+mod value;
 
 use scanner::Scanner;
 use std::env;
