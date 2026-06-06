@@ -38,9 +38,26 @@ impl Interpreter {
                 let left = Self::eval(*left)?;
                 let right = Self::eval(*right)?;
                 match operator.token_type {
-                    TokenType::Minus => {
-                        Self::eval_numeric_binary(left, right, |l, r| l - r, operator)
+                    TokenType::BangEqual => Ok(Value::Bool(left != right)),
+                    TokenType::EqualEqual => Ok(Value::Bool(left == right)),
+                    TokenType::Greater => {
+                        Self::eval_numeric_binary(left, right, |l, r| Value::Bool(l > r), operator)
                     }
+                    TokenType::GreaterEqual => {
+                        Self::eval_numeric_binary(left, right, |l, r| Value::Bool(l >= r), operator)
+                    }
+                    TokenType::Less => {
+                        Self::eval_numeric_binary(left, right, |l, r| Value::Bool(l < r), operator)
+                    }
+                    TokenType::LessEqual => {
+                        Self::eval_numeric_binary(left, right, |l, r| Value::Bool(l <= r), operator)
+                    }
+                    TokenType::Minus => Self::eval_numeric_binary(
+                        left,
+                        right,
+                        |l, r| Value::Number(l - r),
+                        operator,
+                    ),
                     TokenType::Plus => match (left, right) {
                         (Value::Number(l), Value::Number(r)) => Ok(Value::Number(l + r)),
                         (Value::Str(l), Value::Str(r)) => Ok(Value::Str(l + &r)),
@@ -51,13 +68,19 @@ impl Interpreter {
                                 .to_string(),
                         }),
                     },
-                    TokenType::Slash => {
-                        Self::eval_numeric_binary(left, right, |l, r| l / r, operator)
-                    }
-                    TokenType::Star => {
-                        Self::eval_numeric_binary(left, right, |l, r| l * r, operator)
-                    }
-                    _ => todo!(),
+                    TokenType::Slash => Self::eval_numeric_binary(
+                        left,
+                        right,
+                        |l, r| Value::Number(l / r),
+                        operator,
+                    ),
+                    TokenType::Star => Self::eval_numeric_binary(
+                        left,
+                        right,
+                        |l, r| Value::Number(l * r),
+                        operator,
+                    ),
+                    _ => unreachable!("All the binary operators must be covered."),
                 }
             }
             Expr::Grouping { expression } => Self::eval(*expression),
@@ -82,10 +105,10 @@ impl Interpreter {
 
     fn eval_numeric_binary<F>(left: Value, right: Value, op: F, token: Token) -> EvalResult
     where
-        F: Fn(f64, f64) -> f64,
+        F: Fn(f64, f64) -> Value,
     {
         match (left, right) {
-            (Value::Number(l), Value::Number(r)) => Ok(Value::Number(op(l, r))),
+            (Value::Number(l), Value::Number(r)) => Ok(op(l, r)),
             _ => Err(EvalError {
                 line: Some(token.line),
                 place: Some(token.lexeme),
