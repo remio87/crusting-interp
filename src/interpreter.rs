@@ -4,7 +4,7 @@ use crate::token_type::TokenType;
 use crate::value::Value;
 
 #[derive(Debug)]
-struct EvalError {
+pub struct EvalError {
     line: Option<usize>,
     place: Option<String>,
     msg: String,
@@ -25,9 +25,13 @@ impl std::error::Error for EvalError {}
 
 type EvalResult = Result<Value, EvalError>;
 
-struct Interpreter {}
+pub struct Interpreter {}
 
 impl Interpreter {
+    pub fn interpret(expr: Expr) -> EvalResult {
+        Self::eval(expr)
+    }
+
     fn eval(expr: Expr) -> EvalResult {
         match expr {
             Expr::Binary {

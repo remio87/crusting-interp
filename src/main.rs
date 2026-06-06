@@ -6,6 +6,7 @@ mod token;
 mod token_type;
 mod value;
 
+use interpreter::Interpreter;
 use scanner::Scanner;
 use std::env;
 use std::error::Error;
@@ -59,6 +60,7 @@ fn run(code: &str) -> Result<(), Box<dyn Error>> {
     let tokens = scanner.into_tokens()?;
     let parser = Parser::new(tokens);
     let expression = parser.parse()?;
-    println!("{}", expression);
+    let value = Interpreter::interpret(expression)?;
+    println!("{}", value);
     Ok(())
 }
