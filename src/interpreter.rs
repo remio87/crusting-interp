@@ -1,4 +1,5 @@
 use crate::expr::Expr;
+use crate::stmt::Stmt;
 use crate::token::Token;
 use crate::token_type::TokenType;
 use crate::value::Value;
@@ -28,8 +29,24 @@ type EvalResult = Result<Value, EvalError>;
 pub struct Interpreter {}
 
 impl Interpreter {
-    pub fn interpret(expr: Expr) -> EvalResult {
-        Self::eval(expr)
+    pub fn interpret(statements: Vec<Stmt>) -> EvalResult {
+        for statement in statements {
+            Self::execute(statement)?;
+        }
+        Ok(Value::Nil)
+    }
+
+    fn execute(statement: Stmt) -> EvalResult {
+        match statement {
+            Stmt::Expression { expression } => {
+                Self::eval(expression)?;
+                Ok(Value::Nil)
+            }
+            Stmt::Print { expression } => {
+                println!("{}", Self::eval(expression)?);
+                Ok(Value::Nil)
+            }
+        }
     }
 
     fn eval(expr: Expr) -> EvalResult {

@@ -1,4 +1,5 @@
 use crate::expr::Expr;
+use crate::stmt::Stmt;
 use crate::token::{LiteralValue, Token};
 use crate::token_type::TokenType;
 
@@ -28,7 +29,7 @@ impl std::fmt::Display for ParseError {
 
 impl std::error::Error for ParseError {}
 
-pub type ParseResult = Result<Expr, ParseError>;
+pub type ParseResult<T> = Result<T, ParseError>;
 
 pub struct Parser {
     tokens: Vec<Token>,
@@ -40,15 +41,39 @@ impl Parser {
         Parser { tokens, current: 0 }
     }
 
-    pub fn parse(mut self) -> ParseResult {
-        self.expression()
+    pub fn parse(mut self) -> ParseResult<Vec<Stmt>> {
+        let mut statements = Vec::<Stmt>::new();
+        while !self.is_at_end() {
+            statements.push(self.statement()?);
+        }
+        Ok(statements)
     }
 
-    fn expression(&mut self) -> ParseResult {
+    fn expression(&mut self) -> ParseResult<Expr> {
         self.equality()
     }
 
-    fn equality(&mut self) -> ParseResult {
+    fn statement(&mut self) -> ParseResult<Stmt> {
+        if self.match_expr(&[TokenType::Print]) {
+            self.print_statement()
+        } else {
+            self.expression_statement()
+        }
+    }
+
+    fn print_statement(&mut self) -> ParseResult<Stmt> {
+        let value = self.expression()?;
+        self.consume(TokenType::Semicolon, "Expect ';' after value.")?;
+        Ok(Stmt::Print { expression: value })
+    }
+
+    fn expression_statement(&mut self) -> ParseResult<Stmt> {
+        let expression = self.expression()?;
+        self.consume(TokenType::Semicolon, "Expect ';' after expression.")?;
+        Ok(Stmt::Expression { expression })
+    }
+
+    fn equality(&mut self) -> ParseResult<Expr> {
         let mut expr = self.comparison()?;
 
         while self.match_expr(&[TokenType::BangEqual, TokenType::EqualEqual]) {
@@ -64,7 +89,7 @@ impl Parser {
         Ok(expr)
     }
 
-    fn comparison(&mut self) -> ParseResult {
+    fn comparison(&mut self) -> ParseResult<Expr> {
         let mut expr = self.term()?;
 
         while self.match_expr(&[
@@ -85,7 +110,7 @@ impl Parser {
         Ok(expr)
     }
 
-    fn term(&mut self) -> ParseResult {
+    fn term(&mut self) -> ParseResult<Expr> {
         let mut expr = self.factor()?;
 
         while self.match_expr(&[TokenType::Plus, TokenType::Minus]) {
@@ -101,7 +126,7 @@ impl Parser {
         Ok(expr)
     }
 
-    fn factor(&mut self) -> ParseResult {
+    fn factor(&mut self) -> ParseResult<Expr> {
         let mut expr = self.unary()?;
 
         while self.match_expr(&[TokenType::Star, TokenType::Slash]) {
@@ -117,7 +142,7 @@ impl Parser {
         Ok(expr)
     }
 
-    fn unary(&mut self) -> ParseResult {
+    fn unary(&mut self) -> ParseResult<Expr> {
         if self.match_expr(&[TokenType::Bang, TokenType::Minus]) {
             let operator = self.previous().clone();
             let right = self.unary()?;
@@ -130,7 +155,7 @@ impl Parser {
         }
     }
 
-    fn primary(&mut self) -> ParseResult {
+    fn primary(&mut self) -> ParseResult<Expr> {
         match self.peek().token_type {
             TokenType::False => {
                 self.advance();

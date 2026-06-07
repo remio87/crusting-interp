@@ -2,6 +2,7 @@ mod expr;
 mod interpreter;
 mod parser;
 mod scanner;
+mod stmt;
 mod token;
 mod token_type;
 mod value;
@@ -59,8 +60,7 @@ fn run(code: &str) -> Result<(), Box<dyn Error>> {
     scanner.scan_tokens();
     let tokens = scanner.into_tokens()?;
     let parser = Parser::new(tokens);
-    let expression = parser.parse()?;
-    let value = Interpreter::interpret(expression)?;
-    println!("{}", value);
+    let statements = parser.parse()?;
+    Interpreter::interpret(statements)?;
     Ok(())
 }
