@@ -17,6 +17,9 @@ pub enum Expr {
         operator: Token,
         right: Box<Expr>,
     },
+    Variable {
+        name: Token,
+    },
 }
 
 impl std::fmt::Display for Expr {

@@ -44,7 +44,10 @@ impl Parser {
     pub fn parse(mut self) -> ParseResult<Vec<Stmt>> {
         let mut statements = Vec::<Stmt>::new();
         while !self.is_at_end() {
-            statements.push(self.statement()?);
+            statements.push(self.declaration()?);
+            // TODO: consider error handling!!
+            // TODO: what type should we return here?
+            // we will return parsed statements even if in panic mode
         }
         Ok(statements)
     }
@@ -53,12 +56,24 @@ impl Parser {
         self.equality()
     }
 
+    fn declaration(&mut self) -> ParseResult<Stmt> {
+        if self.match_expr(&[TokenType::Var]) {
+            self.var_declaration()
+        } else {
+            self.statement()
+        }
+    }
+
     fn statement(&mut self) -> ParseResult<Stmt> {
         if self.match_expr(&[TokenType::Print]) {
             self.print_statement()
         } else {
             self.expression_statement()
         }
+    }
+
+    fn var_declaration(&mut self) -> ParseResult<Stmt> {
+        todo!();
     }
 
     fn print_statement(&mut self) -> ParseResult<Stmt> {
