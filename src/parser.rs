@@ -30,6 +30,7 @@ impl std::fmt::Display for ParseError {
 impl std::error::Error for ParseError {}
 
 pub type ParseResult<T> = Result<T, ParseError>;
+pub type ParseResultThrough = Result<Vec<Stmt>, Vec<ParseError>>;
 
 pub struct Parser {
     tokens: Vec<Token>,
@@ -41,15 +42,23 @@ impl Parser {
         Parser { tokens, current: 0 }
     }
 
-    pub fn parse(mut self) -> ParseResult<Vec<Stmt>> {
+    pub fn parse(mut self) -> ParseResultThrough {
         let mut statements = Vec::<Stmt>::new();
+        let mut errors = Vec::<ParseError>::new();
         while !self.is_at_end() {
-            statements.push(self.declaration()?);
-            // TODO: consider error handling!!
-            // TODO: what type should we return here?
-            // we will return parsed statements even if in panic mode
+            match self.declaration() {
+                Ok(stmt) => statements.push(stmt),
+                Err(e) => {
+                    self.synchronize();
+                    errors.push(e)
+                }
+            }
         }
-        Ok(statements)
+        if errors.is_empty() {
+            Ok(statements)
+        } else {
+            Err(errors)
+        }
     }
 
     fn expression(&mut self) -> ParseResult<Expr> {
@@ -73,7 +82,21 @@ impl Parser {
     }
 
     fn var_declaration(&mut self) -> ParseResult<Stmt> {
-        todo!();
+        let name = self
+            .consume(TokenType::Identifier, "Expect variable name.")?
+            .clone();
+        let initializer = if self.match_expr(&[TokenType::Equal]) {
+            self.expression()?
+        } else {
+            Expr::Literal {
+                value: LiteralValue::Nil,
+            }
+        };
+        self.consume(
+            TokenType::Semicolon,
+            "Expect ';' after variable declaration.",
+        )?;
+        Ok(Stmt::Var { name, initializer })
     }
 
     fn print_statement(&mut self) -> ParseResult<Stmt> {
@@ -200,6 +223,9 @@ impl Parser {
                         .expect("Literal value must be Some"),
                 })
             }
+            TokenType::Identifier => Ok(Expr::Variable {
+                name: self.advance().clone(),
+            }),
             TokenType::LeftParen => {
                 self.advance();
                 let expr = self.expression()?;

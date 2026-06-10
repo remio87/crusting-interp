@@ -60,7 +60,13 @@ fn run(code: &str) -> Result<(), Box<dyn Error>> {
     scanner.scan_tokens();
     let tokens = scanner.into_tokens()?;
     let parser = Parser::new(tokens);
-    let statements = parser.parse()?;
+    let statements = parser.parse().map_err(|errors| {
+        errors
+            .iter()
+            .map(|e| e.to_string())
+            .collect::<Vec<_>>()
+            .join("\n")
+    })?;
     Interpreter::interpret(statements)?;
     Ok(())
 }

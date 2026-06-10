@@ -43,6 +43,9 @@ impl std::fmt::Display for Expr {
             Expr::Unary { operator, right } => {
                 write!(f, "{}", parenthesize(&operator.lexeme, &[right.as_ref()]))
             }
+            Expr::Variable { name } => {
+                write!(f, "{}", &name.lexeme)
+            }
         }
     }
 }
