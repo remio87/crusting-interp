@@ -1,3 +1,4 @@
+mod environment;
 mod expr;
 mod interpreter;
 mod parser;
@@ -31,13 +32,15 @@ fn main() {
 
 fn run_file(path: &Path) {
     let contents = fs::read_to_string(path).expect("Should have been able to read the file");
-    if let Err(e) = run(&contents) {
+    let mut interpreter = Interpreter::new();
+    if let Err(e) = run(&mut interpreter, &contents) {
         eprintln!("{}", e);
         exit(65);
     }
 }
 
 fn run_prompt() {
+    let mut interpreter = Interpreter::new();
     loop {
         let mut buf = String::new();
         print!("> ");
@@ -49,13 +52,13 @@ fn run_prompt() {
         if buf.is_empty() {
             break;
         }
-        if let Err(e) = run(buf) {
+        if let Err(e) = run(&mut interpreter, buf) {
             eprintln!("{}", e)
         }
     }
 }
 
-fn run(code: &str) -> Result<(), Box<dyn Error>> {
+fn run(interpreter: &mut Interpreter, code: &str) -> Result<(), Box<dyn Error>> {
     let mut scanner = Scanner::new(code);
     scanner.scan_tokens();
     let tokens = scanner.into_tokens()?;
@@ -67,6 +70,6 @@ fn run(code: &str) -> Result<(), Box<dyn Error>> {
             .collect::<Vec<_>>()
             .join("\n")
     })?;
-    Interpreter::interpret(statements)?;
+    interpreter.interpret(statements)?;
     Ok(())
 }

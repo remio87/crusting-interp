@@ -1,6 +1,6 @@
 use crate::token::LiteralValue;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Value {
     Number(f64),
     Str(String),

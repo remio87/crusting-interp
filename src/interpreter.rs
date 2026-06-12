@@ -1,3 +1,4 @@
+use crate::environment::Environment;
 use crate::expr::Expr;
 use crate::stmt::Stmt;
 use crate::token::Token;
@@ -26,38 +27,51 @@ impl std::error::Error for EvalError {}
 
 type EvalResult = Result<Value, EvalError>;
 
-pub struct Interpreter {}
+pub struct Interpreter {
+    environment: Environment,
+}
 
 impl Interpreter {
-    pub fn interpret(statements: Vec<Stmt>) -> EvalResult {
+    pub fn new() -> Self {
+        Interpreter {
+            environment: Environment::new(),
+        }
+    }
+
+    pub fn interpret(&mut self, statements: Vec<Stmt>) -> EvalResult {
         for statement in statements {
-            Self::execute(statement)?;
+            self.execute(statement)?;
         }
         Ok(Value::Nil)
     }
 
-    fn execute(statement: Stmt) -> EvalResult {
+    fn execute(&mut self, statement: Stmt) -> EvalResult {
         match statement {
             Stmt::Expression { expression } => {
-                Self::eval(expression)?;
+                self.eval(expression)?;
                 Ok(Value::Nil)
             }
             Stmt::Print { expression } => {
-                println!("{}", Self::eval(expression)?);
+                println!("{}", self.eval(expression)?);
+                Ok(Value::Nil)
+            }
+            Stmt::Var { name, initializer } => {
+                let val = self.eval(initializer)?;
+                self.environment.define(name.lexeme, val);
                 Ok(Value::Nil)
             }
         }
     }
 
-    fn eval(expr: Expr) -> EvalResult {
+    fn eval(&mut self, expr: Expr) -> EvalResult {
         match expr {
             Expr::Binary {
                 left,
                 operator,
                 right,
             } => {
-                let left = Self::eval(*left)?;
-                let right = Self::eval(*right)?;
+                let left = self.eval(*left)?;
+                let right = self.eval(*right)?;
                 match operator.token_type {
                     TokenType::BangEqual => Ok(Value::Bool(left != right)),
                     TokenType::EqualEqual => Ok(Value::Bool(left == right)),
@@ -104,10 +118,10 @@ impl Interpreter {
                     _ => unreachable!("All the binary operators must be covered."),
                 }
             }
-            Expr::Grouping { expression } => Self::eval(*expression),
+            Expr::Grouping { expression } => self.eval(*expression),
             Expr::Literal { value } => Ok(value.into()),
             Expr::Unary { operator, right } => {
-                let right = Self::eval(*right)?;
+                let right = self.eval(*right)?;
                 match operator.token_type {
                     TokenType::Bang => Ok(Value::Bool(!Self::is_truthy(right))),
                     TokenType::Minus => match right {
@@ -121,6 +135,14 @@ impl Interpreter {
                     _ => unreachable!(),
                 }
             }
+            Expr::Variable { name } => match self.environment.get(&name.lexeme) {
+                Ok(v) => Ok(v.to_owned()),
+                Err(e) => Err(EvalError {
+                    line: Some(name.line),
+                    place: Some(name.lexeme),
+                    msg: e,
+                }),
+            },
         }
     }
 
