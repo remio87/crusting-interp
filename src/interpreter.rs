@@ -65,6 +65,17 @@ impl Interpreter {
 
     fn eval(&mut self, expr: Expr) -> EvalResult {
         match expr {
+            Expr::Assign { name, value } => {
+                let value = self.eval(*value)?;
+                match self.environment.assign(name.lexeme.clone(), value.clone()) {
+                    Ok(()) => Ok(value),
+                    Err(e) => Err(EvalError {
+                        line: Some(name.line),
+                        place: Some(name.lexeme),
+                        msg: e,
+                    }),
+                }
+            }
             Expr::Binary {
                 left,
                 operator,

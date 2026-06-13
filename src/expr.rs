@@ -2,6 +2,10 @@ use crate::token::{LiteralValue, Token};
 
 #[derive(Debug)]
 pub enum Expr {
+    Assign {
+        name: Token,
+        value: Box<Expr>,
+    },
     Binary {
         left: Box<Expr>,
         operator: Token,
@@ -25,6 +29,9 @@ pub enum Expr {
 impl std::fmt::Display for Expr {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            Expr::Assign { name, value } => {
+                write!(f, "{}", parenthesize(&name.lexeme, &[value.as_ref()]))
+            }
             Expr::Binary {
                 left,
                 operator,

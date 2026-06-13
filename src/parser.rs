@@ -35,11 +35,17 @@ pub type ParseResultThrough = Result<Vec<Stmt>, Vec<ParseError>>;
 pub struct Parser {
     tokens: Vec<Token>,
     current: usize,
+    // Errors which do not into panic mode
+    errors: Vec<ParseError>,
 }
 
 impl Parser {
     pub fn new(tokens: Vec<Token>) -> Self {
-        Parser { tokens, current: 0 }
+        Parser {
+            tokens,
+            current: 0,
+            errors: Vec::new(),
+        }
     }
 
     pub fn parse(mut self) -> ParseResultThrough {
@@ -47,9 +53,13 @@ impl Parser {
         let mut errors = Vec::<ParseError>::new();
         while !self.is_at_end() {
             match self.declaration() {
-                Ok(stmt) => statements.push(stmt),
+                Ok(stmt) => {
+                    statements.push(stmt);
+                    errors.append(&mut self.errors)
+                }
                 Err(e) => {
                     self.synchronize();
+                    errors.append(&mut self.errors);
                     errors.push(e)
                 }
             }
@@ -59,10 +69,6 @@ impl Parser {
         } else {
             Err(errors)
         }
-    }
-
-    fn expression(&mut self) -> ParseResult<Expr> {
-        self.equality()
     }
 
     fn declaration(&mut self) -> ParseResult<Stmt> {
@@ -109,6 +115,36 @@ impl Parser {
         let expression = self.expression()?;
         self.consume(TokenType::Semicolon, "Expect ';' after expression.")?;
         Ok(Stmt::Expression { expression })
+    }
+
+    fn expression(&mut self) -> ParseResult<Expr> {
+        self.assignment()
+    }
+
+    fn assignment(&mut self) -> ParseResult<Expr> {
+        let expr = self.equality()?;
+
+        if self.match_expr(&[TokenType::Equal]) {
+            let equals = self.previous().clone();
+            let value = self.assignment()?;
+
+            match expr {
+                Expr::Variable { name } => {
+                    return Ok(Expr::Assign {
+                        name,
+                        value: Box::new(value),
+                    });
+                }
+                _ => {
+                    self.errors.push(ParseError {
+                        token: equals,
+                        msg: "Invalid assignment target.".to_string(),
+                    });
+                }
+            }
+        }
+
+        Ok(expr)
     }
 
     fn equality(&mut self) -> ParseResult<Expr> {

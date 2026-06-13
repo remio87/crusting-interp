@@ -23,4 +23,12 @@ impl Environment {
             None => Err(format!("Undefined variable: '{}'.", name)),
         }
     }
+
+    pub fn assign(&mut self, name: String, value: Value) -> Result<(), String> {
+        if !self.values.contains_key(&name) {
+            return Err(format!("Undefined variable: '{}'.", name));
+        }
+        self.values.insert(name, value);
+        Ok(())
+    }
 }
