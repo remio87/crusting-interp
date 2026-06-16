@@ -5,6 +5,9 @@ use crate::token::Token;
 use crate::token_type::TokenType;
 use crate::value::Value;
 
+use std::cell::RefCell;
+use std::rc::Rc;
+
 #[derive(Debug)]
 pub struct EvalError {
     line: Option<usize>,
@@ -28,13 +31,13 @@ impl std::error::Error for EvalError {}
 type EvalResult = Result<Value, EvalError>;
 
 pub struct Interpreter {
-    environment: Environment,
+    environment: Rc<RefCell<Environment>>,
 }
 
 impl Interpreter {
     pub fn new() -> Self {
         Interpreter {
-            environment: Environment::new(),
+            environment: Rc::new(RefCell::new(Environment::new(None))),
         }
     }
 
@@ -47,6 +50,17 @@ impl Interpreter {
 
     fn execute(&mut self, statement: Stmt) -> EvalResult {
         match statement {
+            Stmt::Block { statements } => {
+                let previous = Rc::clone(&self.environment);
+                self.environment =
+                    Rc::new(RefCell::new(Environment::new(Some(Rc::clone(&previous)))));
+                let result = statements
+                    .into_iter()
+                    .try_for_each(|statement| self.execute(statement).map(|_| ()))
+                    .map(|_| Value::Nil);
+                self.environment = previous;
+                result
+            }
             Stmt::Expression { expression } => {
                 self.eval(expression)?;
                 Ok(Value::Nil)
@@ -57,7 +71,7 @@ impl Interpreter {
             }
             Stmt::Var { name, initializer } => {
                 let val = self.eval(initializer)?;
-                self.environment.define(name.lexeme, val);
+                self.environment.borrow_mut().define(name.lexeme, val);
                 Ok(Value::Nil)
             }
         }
@@ -67,7 +81,11 @@ impl Interpreter {
         match expr {
             Expr::Assign { name, value } => {
                 let value = self.eval(*value)?;
-                match self.environment.assign(name.lexeme.clone(), value.clone()) {
+                match self
+                    .environment
+                    .borrow_mut()
+                    .assign(name.lexeme.clone(), value.clone())
+                {
                     Ok(()) => Ok(value),
                     Err(e) => Err(EvalError {
                         line: Some(name.line),
@@ -146,8 +164,8 @@ impl Interpreter {
                     _ => unreachable!(),
                 }
             }
-            Expr::Variable { name } => match self.environment.get(&name.lexeme) {
-                Ok(v) => Ok(v.to_owned()),
+            Expr::Variable { name } => match self.environment.borrow().get(&name.lexeme) {
+                Ok(v) => Ok(v),
                 Err(e) => Err(EvalError {
                     line: Some(name.line),
                     place: Some(name.lexeme),
