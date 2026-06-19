@@ -65,6 +65,18 @@ impl Interpreter {
                 self.eval(expression)?;
                 Ok(Value::Nil)
             }
+            Stmt::If {
+                condition,
+                then_branch,
+                else_branch,
+            } => {
+                if Self::is_truthy(self.eval(condition)?) {
+                    self.execute(*then_branch)?;
+                } else if let Some(stmt) = else_branch {
+                    self.execute(*stmt)?;
+                }
+                Ok(Value::Nil)
+            }
             Stmt::Print { expression } => {
                 println!("{}", self.eval(expression)?);
                 Ok(Value::Nil)

@@ -80,7 +80,9 @@ impl Parser {
     }
 
     fn statement(&mut self) -> ParseResult<Stmt> {
-        if self.match_expr(&[TokenType::Print]) {
+        if self.match_expr(&[TokenType::If]) {
+            self.if_statement()
+        } else if self.match_expr(&[TokenType::Print]) {
             self.print_statement()
         } else if self.match_expr(&[TokenType::LeftBrace]) {
             self.block()
@@ -105,6 +107,25 @@ impl Parser {
             "Expect ';' after variable declaration.",
         )?;
         Ok(Stmt::Var { name, initializer })
+    }
+
+    fn if_statement(&mut self) -> ParseResult<Stmt> {
+        self.consume(TokenType::LeftParen, "Expect '(' after 'if'.")?;
+        let condition = self.expression()?;
+        self.consume(TokenType::RightParen, "Expect ')' after if condition.")?;
+
+        let then_branch = Box::new(self.statement()?);
+        let else_branch = if self.match_expr(&[TokenType::Else]) {
+            Some(Box::new(self.statement()?))
+        } else {
+            None
+        };
+
+        Ok(Stmt::If {
+            condition,
+            then_branch,
+            else_branch,
+        })
     }
 
     fn print_statement(&mut self) -> ParseResult<Stmt> {
