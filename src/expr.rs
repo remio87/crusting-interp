@@ -17,6 +17,11 @@ pub enum Expr {
     Literal {
         value: LiteralValue,
     },
+    Logical {
+        left: Box<Expr>,
+        operator: Token,
+        right: Box<Expr>,
+    },
     Unary {
         operator: Token,
         right: Box<Expr>,
@@ -47,6 +52,15 @@ impl std::fmt::Display for Expr {
             Expr::Literal { value } => {
                 write!(f, "{}", value)
             }
+            Expr::Logical {
+                left,
+                operator,
+                right,
+            } => write!(
+                f,
+                "{}",
+                parenthesize(&operator.lexeme, &[left.as_ref(), right.as_ref()])
+            ),
             Expr::Unary { operator, right } => {
                 write!(f, "{}", parenthesize(&operator.lexeme, &[right.as_ref()]))
             }

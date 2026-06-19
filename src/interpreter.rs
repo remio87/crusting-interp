@@ -70,7 +70,7 @@ impl Interpreter {
                 then_branch,
                 else_branch,
             } => {
-                if Self::is_truthy(self.eval(condition)?) {
+                if Self::is_truthy(&self.eval(condition)?) {
                     self.execute(*then_branch)?;
                 } else if let Some(stmt) = else_branch {
                     self.execute(*stmt)?;
@@ -161,10 +161,34 @@ impl Interpreter {
             }
             Expr::Grouping { expression } => self.eval(*expression),
             Expr::Literal { value } => Ok(value.into()),
+            Expr::Logical {
+                left,
+                operator,
+                right,
+            } => {
+                let left = self.eval(*left)?;
+                match operator.token_type {
+                    TokenType::Or => {
+                        if Self::is_truthy(&left) {
+                            Ok(left)
+                        } else {
+                            self.eval(*right)
+                        }
+                    }
+                    TokenType::And => {
+                        if !Self::is_truthy(&left) {
+                            Ok(left)
+                        } else {
+                            self.eval(*right)
+                        }
+                    }
+                    _ => unreachable!("Invalid logical operator."),
+                }
+            }
             Expr::Unary { operator, right } => {
                 let right = self.eval(*right)?;
                 match operator.token_type {
-                    TokenType::Bang => Ok(Value::Bool(!Self::is_truthy(right))),
+                    TokenType::Bang => Ok(Value::Bool(!Self::is_truthy(&right))),
                     TokenType::Minus => match right {
                         Value::Number(num) => Ok(Value::Number(-num)),
                         _ => Err(EvalError {
@@ -201,11 +225,11 @@ impl Interpreter {
         }
     }
 
-    fn is_truthy(val: Value) -> bool {
+    fn is_truthy(val: &Value) -> bool {
         match val {
             Value::Number(_) => true,
             Value::Str(_) => true,
-            Value::Bool(b) => b,
+            Value::Bool(b) => *b,
             Value::Nil => false,
         }
     }

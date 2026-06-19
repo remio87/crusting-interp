@@ -1,0 +1,28 @@
+// or: left truthy -> return left (short-circuit)
+print "hello" or "world";  // hello
+
+// or: left falsy -> return right
+print nil or "fallback";   // fallback
+
+// and: left truthy -> return right
+print true and "yes";      // yes
+
+// and: left falsy -> return left (short-circuit)
+print false and "yes";     // false
+
+// short-circuit: right side must NOT be evaluated
+var triggered = false;
+false and (triggered = true);
+print triggered;  // false (and short-circuit: right not evaluated)
+
+true or (triggered = true);
+print triggered;  // false (or short-circuit: right not evaluated)
+
+// chaining
+print true and true and "all true";   // all true
+print false or false or "last";       // last
+
+// use in if condition
+if (nil or true) print "nil or true: ok";
+if (true and false) print "true and false: should not print";
+else print "true and false is false: ok";
