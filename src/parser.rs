@@ -84,6 +84,8 @@ impl Parser {
             self.if_statement()
         } else if self.match_expr(&[TokenType::Print]) {
             self.print_statement()
+        } else if self.match_expr(&[TokenType::While]) {
+            self.while_statement()
         } else if self.match_expr(&[TokenType::LeftBrace]) {
             self.block()
         } else {
@@ -132,6 +134,16 @@ impl Parser {
         let value = self.expression()?;
         self.consume(TokenType::Semicolon, "Expect ';' after value.")?;
         Ok(Stmt::Print { expression: value })
+    }
+
+    fn while_statement(&mut self) -> ParseResult<Stmt> {
+        self.consume(TokenType::LeftParen, "Expect '(' after 'while'.")?;
+        let condition = self.expression()?;
+        self.consume(TokenType::RightParen, "Expect ')' after while condition.")?;
+
+        let body = Box::new(self.statement()?);
+
+        Ok(Stmt::While { condition, body })
     }
 
     fn block(&mut self) -> ParseResult<Stmt> {

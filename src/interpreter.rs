@@ -43,12 +43,12 @@ impl Interpreter {
 
     pub fn interpret(&mut self, statements: Vec<Stmt>) -> EvalResult {
         for statement in statements {
-            self.execute(statement)?;
+            self.execute(&statement)?;
         }
         Ok(Value::Nil)
     }
 
-    fn execute(&mut self, statement: Stmt) -> EvalResult {
+    fn execute(&mut self, statement: &Stmt) -> EvalResult {
         match statement {
             Stmt::Block { statements } => {
                 let previous = Rc::clone(&self.environment);
@@ -71,9 +71,9 @@ impl Interpreter {
                 else_branch,
             } => {
                 if Self::is_truthy(&self.eval(condition)?) {
-                    self.execute(*then_branch)?;
+                    self.execute(then_branch)?;
                 } else if let Some(stmt) = else_branch {
-                    self.execute(*stmt)?;
+                    self.execute(stmt)?;
                 }
                 Ok(Value::Nil)
             }
@@ -83,16 +83,24 @@ impl Interpreter {
             }
             Stmt::Var { name, initializer } => {
                 let val = self.eval(initializer)?;
-                self.environment.borrow_mut().define(name.lexeme, val);
+                self.environment
+                    .borrow_mut()
+                    .define(name.lexeme.clone(), val);
+                Ok(Value::Nil)
+            }
+            Stmt::While { condition, body } => {
+                while Self::is_truthy(&self.eval(condition)?) {
+                    self.execute(body)?;
+                }
                 Ok(Value::Nil)
             }
         }
     }
 
-    fn eval(&mut self, expr: Expr) -> EvalResult {
+    fn eval(&mut self, expr: &Expr) -> EvalResult {
         match expr {
             Expr::Assign { name, value } => {
-                let value = self.eval(*value)?;
+                let value = self.eval(value)?;
                 match self
                     .environment
                     .borrow_mut()
@@ -101,7 +109,7 @@ impl Interpreter {
                     Ok(()) => Ok(value),
                     Err(e) => Err(EvalError {
                         line: Some(name.line),
-                        place: Some(name.lexeme),
+                        place: Some(name.lexeme.clone()),
                         msg: e,
                     }),
                 }
@@ -111,8 +119,8 @@ impl Interpreter {
                 operator,
                 right,
             } => {
-                let left = self.eval(*left)?;
-                let right = self.eval(*right)?;
+                let left = self.eval(left)?;
+                let right = self.eval(right)?;
                 match operator.token_type {
                     TokenType::BangEqual => Ok(Value::Bool(left != right)),
                     TokenType::EqualEqual => Ok(Value::Bool(left == right)),
@@ -139,7 +147,7 @@ impl Interpreter {
                         (Value::Str(l), Value::Str(r)) => Ok(Value::Str(l + &r)),
                         _ => Err(EvalError {
                             line: Some(operator.line),
-                            place: Some(operator.lexeme),
+                            place: Some(operator.lexeme.clone()),
                             msg: "Not both of left and right are either number or string."
                                 .to_string(),
                         }),
@@ -159,41 +167,41 @@ impl Interpreter {
                     _ => unreachable!("All the binary operators must be covered."),
                 }
             }
-            Expr::Grouping { expression } => self.eval(*expression),
-            Expr::Literal { value } => Ok(value.into()),
+            Expr::Grouping { expression } => self.eval(expression),
+            Expr::Literal { value } => Ok(value.clone().into()),
             Expr::Logical {
                 left,
                 operator,
                 right,
             } => {
-                let left = self.eval(*left)?;
+                let left = self.eval(left)?;
                 match operator.token_type {
                     TokenType::Or => {
                         if Self::is_truthy(&left) {
                             Ok(left)
                         } else {
-                            self.eval(*right)
+                            self.eval(right)
                         }
                     }
                     TokenType::And => {
                         if !Self::is_truthy(&left) {
                             Ok(left)
                         } else {
-                            self.eval(*right)
+                            self.eval(right)
                         }
                     }
                     _ => unreachable!("Invalid logical operator."),
                 }
             }
             Expr::Unary { operator, right } => {
-                let right = self.eval(*right)?;
+                let right = self.eval(right)?;
                 match operator.token_type {
                     TokenType::Bang => Ok(Value::Bool(!Self::is_truthy(&right))),
                     TokenType::Minus => match right {
                         Value::Number(num) => Ok(Value::Number(-num)),
                         _ => Err(EvalError {
                             line: Some(operator.line),
-                            place: Some(operator.lexeme),
+                            place: Some(operator.lexeme.clone()),
                             msg: "Unary minus can only be applied to number.".to_string(),
                         }),
                     },
@@ -204,14 +212,14 @@ impl Interpreter {
                 Ok(v) => Ok(v),
                 Err(e) => Err(EvalError {
                     line: Some(name.line),
-                    place: Some(name.lexeme),
+                    place: Some(name.lexeme.clone()),
                     msg: e,
                 }),
             },
         }
     }
 
-    fn eval_numeric_binary<F>(left: Value, right: Value, op: F, token: Token) -> EvalResult
+    fn eval_numeric_binary<F>(left: Value, right: Value, op: F, token: &Token) -> EvalResult
     where
         F: Fn(f64, f64) -> Value,
     {
@@ -219,7 +227,7 @@ impl Interpreter {
             (Value::Number(l), Value::Number(r)) => Ok(op(l, r)),
             _ => Err(EvalError {
                 line: Some(token.line),
-                place: Some(token.lexeme),
+                place: Some(token.lexeme.clone()),
                 msg: "Not both of left and right are number.".to_string(),
             }),
         }
