@@ -80,7 +80,9 @@ impl Parser {
     }
 
     fn statement(&mut self) -> ParseResult<Stmt> {
-        if self.match_expr(&[TokenType::If]) {
+        if self.match_expr(&[TokenType::For]) {
+            self.for_statement()
+        } else if self.match_expr(&[TokenType::If]) {
             self.if_statement()
         } else if self.match_expr(&[TokenType::Print]) {
             self.print_statement()
@@ -109,6 +111,60 @@ impl Parser {
             "Expect ';' after variable declaration.",
         )?;
         Ok(Stmt::Var { name, initializer })
+    }
+
+    fn for_statement(&mut self) -> ParseResult<Stmt> {
+        self.consume(TokenType::LeftParen, "Expect '(' after 'for'.")?;
+
+        let initializer = if self.match_expr(&[TokenType::Semicolon]) {
+            None
+        } else if self.match_expr(&[TokenType::Var]) {
+            Some(self.var_declaration()?)
+        } else {
+            Some(self.expression_statement()?)
+        };
+
+        let condition = if self.check(TokenType::Semicolon) {
+            None
+        } else {
+            Some(self.expression()?)
+        };
+        self.consume(TokenType::Semicolon, "Expect ';' after loop condition.")?;
+
+        let increment = if self.check(TokenType::RightParen) {
+            None
+        } else {
+            Some(self.expression()?)
+        };
+        self.consume(TokenType::RightParen, "Expect ')' after for clauses.")?;
+
+        let mut body = self.statement()?;
+
+        if let Some(increment) = increment {
+            body = Stmt::Block {
+                statements: vec![
+                    body,
+                    Stmt::Expression {
+                        expression: increment,
+                    },
+                ],
+            };
+        }
+
+        body = Stmt::While {
+            condition: condition.unwrap_or(Expr::Literal {
+                value: LiteralValue::Bool(true),
+            }),
+            body: Box::new(body),
+        };
+
+        if let Some(initializer) = initializer {
+            body = Stmt::Block {
+                statements: vec![initializer, body],
+            }
+        }
+
+        Ok(body)
     }
 
     fn if_statement(&mut self) -> ParseResult<Stmt> {

@@ -55,7 +55,7 @@ impl Interpreter {
                 self.environment =
                     Rc::new(RefCell::new(Environment::new(Some(Rc::clone(&previous)))));
                 let result = statements
-                    .into_iter()
+                    .iter()
                     .try_for_each(|statement| self.execute(statement).map(|_| ()))
                     .map(|_| Value::Nil);
                 self.environment = previous;
