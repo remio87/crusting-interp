@@ -1,0 +1,47 @@
+// Basic if: true branch
+if (true) print "if true: ok";
+
+// Basic if: false branch skipped
+if (false) print "if false: should not print";
+
+// if-else: true
+if (true) print "if-else true: ok";
+else print "if-else true: should not print";
+
+// if-else: false
+if (false) print "if-else false: should not print";
+else print "if-else false: ok";
+
+// Truthiness: nil is falsy
+if (nil) print "nil truthy: should not print";
+else print "nil falsy: ok";
+
+// Truthiness: 0 is truthy (Lox differs from many languages)
+if (0) print "0 truthy: ok";
+else print "0 falsy: should not print";
+
+// Truthiness: string is truthy
+if ("hello") print "string truthy: ok";
+else print "string falsy: should not print";
+
+// Nested if-else (dangling else goes to nearest if)
+var x = 10;
+if (x > 5)
+    if (x > 20)
+        print "x > 20";
+    else
+        print "5 < x <= 20: ok";
+
+// if with block
+if (true) {
+    var msg = "block in if: ok";
+    print msg;
+}
+
+// if-else with blocks
+var score = 80;
+if (score >= 90) {
+    print "grade: A";
+} else {
+    print "grade: B or lower";
+}
