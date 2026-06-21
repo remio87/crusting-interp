@@ -7,7 +7,7 @@ pub enum Value {
     Number(f64),
     Str(String),
     Bool(bool),
-    Callable {
+    LoxFunction {
         name: String,
         args: Vec<Token>,
         body: Vec<Stmt>,
@@ -29,7 +29,7 @@ impl std::fmt::Display for Value {
             }
             Value::Str(s) => write!(f, "{}", s),
             Value::Bool(b) => write!(f, "{}", b),
-            Value::Callable { name, .. } => {
+            Value::LoxFunction { name, .. } => {
                 write!(f, "fn {}", name)
             }
             Value::Nil => write!(f, "nil"),

@@ -178,7 +178,7 @@ impl Interpreter {
                     .map(|arg| self.eval(arg))
                     .collect::<Result<Vec<_>, _>>()?;
                 match callee {
-                    Value::Callable { name, args, body } => {
+                    Value::LoxFunction { name, args, body } => {
                         if arguments.len() != args.len() {
                             return Err(EvalError {
                                 line: Some(paren.line),
@@ -270,7 +270,7 @@ impl Interpreter {
             Value::Number(_) => true,
             Value::Str(_) => true,
             Value::Bool(b) => *b,
-            Value::Callable { .. } => true,
+            Value::LoxFunction { .. } => true,
             Value::Nil => false,
         }
     }
