@@ -271,6 +271,7 @@ impl Interpreter {
             Value::Str(_) => true,
             Value::Bool(b) => *b,
             Value::LoxFunction { .. } => true,
+            Value::NativeFunction { .. } => true,
             Value::Nil => false,
         }
     }
