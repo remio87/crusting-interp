@@ -1,0 +1,49 @@
+// basic function call
+fun greet(name) {
+  print name;
+}
+greet("hello");
+
+// multiple parameters
+fun add(a, b) {
+  print a + b;
+}
+add(1, 2);
+
+// clock (native function)
+var before = clock();
+var after = clock();
+print after - before >= 0;
+
+// recursive countdown
+fun countdown(n) {
+  print n;
+  if (n > 0) countdown(n - 1);
+}
+countdown(3);
+
+// global variable is visible from inside function
+var globalVal = "global";
+fun showGlobal() {
+  print globalVal;
+}
+showGlobal();
+
+// function must NOT see caller's local variable
+// showGlobal() should print "global", not "local"
+fun callFromLocal() {
+  var globalVal = "local";
+  showGlobal();
+}
+callFromLocal();
+
+// function must NOT see caller's local variable (explicit check)
+var x = "global x";
+fun readX() {
+  print x;
+}
+fun shadow() {
+  var x = "shadow x";
+  readX();
+}
+shadow();

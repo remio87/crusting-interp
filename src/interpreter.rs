@@ -33,6 +33,7 @@ type EvalResult = Result<Value, EvalError>;
 
 pub struct Interpreter {
     environment: Rc<RefCell<Environment>>,
+    global: Rc<RefCell<Environment>>,
 }
 
 impl Interpreter {
@@ -53,8 +54,10 @@ impl Interpreter {
                 }),
             },
         );
+        let environment = Rc::new(RefCell::new(environment));
         Interpreter {
-            environment: Rc::new(RefCell::new(environment)),
+            environment: Rc::clone(&environment),
+            global: Rc::clone(&environment),
         }
     }
 
@@ -65,21 +68,42 @@ impl Interpreter {
         Ok(Value::Nil)
     }
 
+    fn execute_block(
+        &mut self,
+        statements: &[Stmt],
+        environment: Rc<RefCell<Environment>>,
+    ) -> EvalResult {
+        let previous = Rc::clone(&self.environment);
+        self.environment = environment;
+        let result = statements
+            .iter()
+            .try_for_each(|statement| self.execute(statement).map(|_| ()))
+            .map(|_| Value::Nil);
+        self.environment = previous;
+        result
+    }
+
     fn execute(&mut self, statement: &Stmt) -> EvalResult {
         match statement {
             Stmt::Block { statements } => {
-                let previous = Rc::clone(&self.environment);
-                self.environment =
-                    Rc::new(RefCell::new(Environment::new(Some(Rc::clone(&previous)))));
-                let result = statements
-                    .iter()
-                    .try_for_each(|statement| self.execute(statement).map(|_| ()))
-                    .map(|_| Value::Nil);
-                self.environment = previous;
-                result
+                let environment = Rc::new(RefCell::new(Environment::new(Some(Rc::clone(
+                    &self.environment,
+                )))));
+                self.execute_block(statements, environment)
             }
             Stmt::Expression { expression } => {
                 self.eval(expression)?;
+                Ok(Value::Nil)
+            }
+            Stmt::Function { name, params, body } => {
+                self.environment.borrow_mut().define(
+                    name.lexeme.clone(),
+                    Value::LoxFunction {
+                        name: name.lexeme.clone(),
+                        args: params.clone(),
+                        body: body.clone(),
+                    },
+                );
                 Ok(Value::Nil)
             }
             Stmt::If {
@@ -195,7 +219,7 @@ impl Interpreter {
                     .map(|arg| self.eval(arg))
                     .collect::<Result<Vec<_>, _>>()?;
                 match callee {
-                    Value::LoxFunction { name, args, body } => {
+                    Value::LoxFunction { args, body, .. } => {
                         if arguments.len() != args.len() {
                             return Err(EvalError {
                                 line: Some(paren.line),
@@ -207,7 +231,13 @@ impl Interpreter {
                                 ),
                             });
                         }
-                        todo!()
+                        let mut environment = Environment::new(Some(Rc::clone(&self.global)));
+                        args.iter()
+                            .zip(arguments.iter())
+                            .for_each(|(token, value)| {
+                                environment.define(token.lexeme.clone(), value.clone());
+                            });
+                        self.execute_block(&body, Rc::new(RefCell::new(environment)))
                     }
                     Value::NativeFunction {
                         arity, function, ..
