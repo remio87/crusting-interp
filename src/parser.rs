@@ -72,11 +72,51 @@ impl Parser {
     }
 
     fn declaration(&mut self) -> ParseResult<Stmt> {
-        if self.match_expr(&[TokenType::Var]) {
+        if self.match_expr(&[TokenType::Fun]) {
+            self.function("function")
+        } else if self.match_expr(&[TokenType::Var]) {
             self.var_declaration()
         } else {
             self.statement()
         }
+    }
+
+    fn function(&mut self, kind: &str) -> ParseResult<Stmt> {
+        let name = self
+            .consume(TokenType::Identifier, &format!("Expect {} name.", kind))?
+            .clone();
+
+        self.consume(
+            TokenType::LeftParen,
+            &format!("Expect '(' after {} name.", kind),
+        )?;
+        let mut params: Vec<Token> = Vec::new();
+        if !self.check(TokenType::RightParen) {
+            loop {
+                if params.len() >= 255 {
+                    self.errors.push(ParseError {
+                        token: self.peek().clone(),
+                        msg: "Can't have more than 255 parameters.".to_string(),
+                    });
+                }
+                params.push(
+                    self.consume(TokenType::Identifier, "Expect parameter name.")?
+                        .clone(),
+                );
+                if !self.match_expr(&[TokenType::Comma]) {
+                    break;
+                }
+            }
+        }
+        self.consume(TokenType::RightParen, "Expect ')' after parameters.")?;
+
+        self.consume(
+            TokenType::LeftBrace,
+            &format!("Expect '{{' before {} body.", kind),
+        )?;
+        let body = self.block_statements()?;
+
+        Ok(Stmt::Function { name, params, body })
     }
 
     fn statement(&mut self) -> ParseResult<Stmt> {
@@ -202,13 +242,19 @@ impl Parser {
         Ok(Stmt::While { condition, body })
     }
 
-    fn block(&mut self) -> ParseResult<Stmt> {
+    fn block_statements(&mut self) -> ParseResult<Vec<Stmt>> {
         let mut statements = Vec::<Stmt>::new();
         while !self.check(TokenType::RightBrace) && !self.is_at_end() {
             statements.push(self.declaration()?);
         }
         self.consume(TokenType::RightBrace, "Expect '}' after block.")?;
-        Ok(Stmt::Block { statements })
+        Ok(statements)
+    }
+
+    fn block(&mut self) -> ParseResult<Stmt> {
+        Ok(Stmt::Block {
+            statements: self.block_statements()?,
+        })
     }
 
     fn expression_statement(&mut self) -> ParseResult<Stmt> {
