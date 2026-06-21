@@ -7,6 +7,7 @@ use crate::value::Value;
 
 use std::cell::RefCell;
 use std::rc::Rc;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 #[derive(Debug)]
 pub struct EvalError {
@@ -36,8 +37,24 @@ pub struct Interpreter {
 
 impl Interpreter {
     pub fn new() -> Self {
+        let mut environment = Environment::new(None);
+        environment.define(
+            "clock".to_string(),
+            Value::NativeFunction {
+                name: "clock".to_string(),
+                arity: 0,
+                function: Rc::new(|_| {
+                    Value::Number(
+                        SystemTime::now()
+                            .duration_since(UNIX_EPOCH)
+                            .unwrap()
+                            .as_secs_f64(),
+                    )
+                }),
+            },
+        );
         Interpreter {
-            environment: Rc::new(RefCell::new(Environment::new(None))),
+            environment: Rc::new(RefCell::new(environment)),
         }
     }
 
@@ -191,6 +208,22 @@ impl Interpreter {
                             });
                         }
                         todo!()
+                    }
+                    Value::NativeFunction {
+                        arity, function, ..
+                    } => {
+                        if arguments.len() != arity {
+                            return Err(EvalError {
+                                line: Some(paren.line),
+                                place: Some(paren.lexeme.clone()),
+                                msg: format!(
+                                    "Expected {} arguments, but got {}.",
+                                    arity,
+                                    arguments.len()
+                                ),
+                            });
+                        }
+                        Ok(function(Vec::new()))
                     }
                     _ => Err(EvalError {
                         line: Some(paren.line),
