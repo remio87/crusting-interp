@@ -1,6 +1,6 @@
 use crate::token::{LiteralValue, Token};
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Expr {
     Assign {
         name: Token,
@@ -10,6 +10,11 @@ pub enum Expr {
         left: Box<Expr>,
         operator: Token,
         right: Box<Expr>,
+    },
+    Call {
+        callee: Box<Expr>,
+        paren: Token,
+        arguments: Vec<Expr>,
     },
     Grouping {
         expression: Box<Expr>,
@@ -46,6 +51,15 @@ impl std::fmt::Display for Expr {
                 "{}",
                 parenthesize(&operator.lexeme, &[left.as_ref(), right.as_ref()])
             ),
+            Expr::Call {
+                callee,
+                paren: _,
+                arguments,
+            } => {
+                let mut expressions = vec![callee.as_ref()];
+                arguments.iter().for_each(|e| expressions.push(e));
+                write!(f, "{}", parenthesize("call", &expressions))
+            }
             Expr::Grouping { expression } => {
                 write!(f, "{}", parenthesize("group", &[expression.as_ref()]))
             }

@@ -1,10 +1,17 @@
+use crate::stmt::Stmt;
 use crate::token::LiteralValue;
+use crate::token::Token;
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Value {
     Number(f64),
     Str(String),
     Bool(bool),
+    Callable {
+        name: String,
+        args: Vec<Token>,
+        body: Vec<Stmt>,
+    },
     Nil,
 }
 
@@ -22,6 +29,9 @@ impl std::fmt::Display for Value {
             }
             Value::Str(s) => write!(f, "{}", s),
             Value::Bool(b) => write!(f, "{}", b),
+            Value::Callable { name, .. } => {
+                write!(f, "fn {}", name)
+            }
             Value::Nil => write!(f, "nil"),
         }
     }

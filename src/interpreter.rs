@@ -167,6 +167,38 @@ impl Interpreter {
                     _ => unreachable!("All the binary operators must be covered."),
                 }
             }
+            Expr::Call {
+                callee,
+                paren,
+                arguments,
+            } => {
+                let callee = self.eval(callee)?;
+                let arguments = arguments
+                    .iter()
+                    .map(|arg| self.eval(arg))
+                    .collect::<Result<Vec<_>, _>>()?;
+                match callee {
+                    Value::Callable { name, args, body } => {
+                        if arguments.len() != args.len() {
+                            return Err(EvalError {
+                                line: Some(paren.line),
+                                place: Some(paren.lexeme.clone()),
+                                msg: format!(
+                                    "Expected {} arguments, but got {}.",
+                                    args.len(),
+                                    arguments.len()
+                                ),
+                            });
+                        }
+                        todo!()
+                    }
+                    _ => Err(EvalError {
+                        line: Some(paren.line),
+                        place: Some(paren.lexeme.clone()),
+                        msg: "Can only call functions and classes.".to_string(),
+                    }),
+                }
+            }
             Expr::Grouping { expression } => self.eval(expression),
             Expr::Literal { value } => Ok(value.clone().into()),
             Expr::Logical {
@@ -238,6 +270,7 @@ impl Interpreter {
             Value::Number(_) => true,
             Value::Str(_) => true,
             Value::Bool(b) => *b,
+            Value::Callable { .. } => true,
             Value::Nil => false,
         }
     }
