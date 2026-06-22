@@ -253,7 +253,7 @@ impl Interpreter {
                                 ),
                             });
                         }
-                        Ok(function(Vec::new()))
+                        Ok(function(arguments))
                     }
                     _ => Err(EvalError {
                         line: Some(paren.line),
