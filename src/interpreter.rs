@@ -10,13 +10,19 @@ use std::rc::Rc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 #[derive(Debug)]
+pub struct ReturnValue {
+    keyword: Token,
+    value: Value,
+}
+
+#[derive(Debug)]
 pub enum EvalError {
     RuntimeError {
         line: Option<usize>,
         place: Option<String>,
         msg: String,
     },
-    Return(Value),
+    Return(Box<ReturnValue>),
 }
 
 impl std::fmt::Display for EvalError {
@@ -30,8 +36,8 @@ impl std::fmt::Display for EvalError {
                 let place = place.clone().unwrap_or("unknown".to_string());
                 write!(f, "[line {}] Error at {}: {}", line, place, msg)
             }
-            EvalError::Return(value) => {
-                write!(f, "Value returned: {}", value)
+            EvalError::Return(ret) => {
+                write!(f, "Value {} returned from {}", ret.value, ret.keyword)
             }
         }
     }
@@ -73,7 +79,17 @@ impl Interpreter {
 
     pub fn interpret(&mut self, statements: Vec<Stmt>) -> EvalResult {
         for statement in statements {
-            self.execute(&statement)?;
+            match self.execute(&statement) {
+                Err(EvalError::Return(ret)) => {
+                    return Err(EvalError::RuntimeError {
+                        line: Some(ret.keyword.line),
+                        place: Some(ret.keyword.lexeme.clone()),
+                        msg: "Can't return from top-level code.".to_string(),
+                    });
+                }
+                Err(e) => return Err(e),
+                Ok(_) => {}
+            }
         }
         Ok(Value::Nil)
     }
@@ -131,6 +147,15 @@ impl Interpreter {
             Stmt::Print { expression } => {
                 println!("{}", self.eval(expression)?);
                 Ok(Value::Nil)
+            }
+            Stmt::Return { keyword, value } => {
+                let value = match value {
+                    Some(expr) => self.eval(expr)?,
+                    None => Value::Nil,
+                };
+                let keyword = keyword.clone();
+                let ret = Box::new(ReturnValue { keyword, value });
+                Err(EvalError::Return(ret))
             }
             Stmt::Var { name, initializer } => {
                 let val = self.eval(initializer)?;
@@ -247,7 +272,10 @@ impl Interpreter {
                             .for_each(|(token, value)| {
                                 environment.define(token.lexeme.clone(), value.clone());
                             });
-                        self.execute_block(&body, Rc::new(RefCell::new(environment)))
+                        match self.execute_block(&body, Rc::new(RefCell::new(environment))) {
+                            Err(EvalError::Return(ret)) => Ok(ret.value),
+                            result => result,
+                        }
                     }
                     Value::NativeFunction {
                         arity, function, ..

@@ -47,3 +47,34 @@ fun shadow() {
   readX();
 }
 shadow();
+
+// return a value
+fun double(n) {
+  return n * 2;
+}
+print double(5); // 10
+
+// early return
+fun sign(n) {
+  if (n < 0) return "negative";
+  if (n > 0) return "positive";
+  return "zero";
+}
+print sign(-3);  // negative
+print sign(0);   // zero
+print sign(7);   // positive
+
+// return with no value yields nil
+fun noReturn() {
+  return;
+}
+print noReturn(); // nil
+
+// fibonacci
+fun fib(n) {
+  if (n <= 1) return n;
+  return fib(n - 1) + fib(n - 2);
+}
+print fib(0);  // 0
+print fib(1);  // 1
+print fib(10); // 55
