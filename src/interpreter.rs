@@ -10,20 +10,30 @@ use std::rc::Rc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 #[derive(Debug)]
-pub struct EvalError {
-    line: Option<usize>,
-    place: Option<String>,
-    msg: String,
+pub enum EvalError {
+    RuntimeError {
+        line: Option<usize>,
+        place: Option<String>,
+        msg: String,
+    },
+    Return(Value),
 }
 
 impl std::fmt::Display for EvalError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let line = match self.line {
-            Some(l) => format!("{}", l),
-            None => "unknown".to_string(),
-        };
-        let place = self.place.clone().unwrap_or("unknown".to_string());
-        write!(f, "[line {}] Error at {}: {}", line, place, self.msg)
+        match self {
+            EvalError::RuntimeError { line, place, msg } => {
+                let line = match line {
+                    Some(l) => format!("{}", l),
+                    None => "unknown".to_string(),
+                };
+                let place = place.clone().unwrap_or("unknown".to_string());
+                write!(f, "[line {}] Error at {}: {}", line, place, msg)
+            }
+            EvalError::Return(value) => {
+                write!(f, "Value returned: {}", value)
+            }
+        }
     }
 }
 
@@ -148,7 +158,7 @@ impl Interpreter {
                     .assign(name.lexeme.clone(), value.clone())
                 {
                     Ok(()) => Ok(value),
-                    Err(e) => Err(EvalError {
+                    Err(e) => Err(EvalError::RuntimeError {
                         line: Some(name.line),
                         place: Some(name.lexeme.clone()),
                         msg: e,
@@ -186,7 +196,7 @@ impl Interpreter {
                     TokenType::Plus => match (left, right) {
                         (Value::Number(l), Value::Number(r)) => Ok(Value::Number(l + r)),
                         (Value::Str(l), Value::Str(r)) => Ok(Value::Str(l + &r)),
-                        _ => Err(EvalError {
+                        _ => Err(EvalError::RuntimeError {
                             line: Some(operator.line),
                             place: Some(operator.lexeme.clone()),
                             msg: "Not both of left and right are either number or string."
@@ -221,7 +231,7 @@ impl Interpreter {
                 match callee {
                     Value::LoxFunction { args, body, .. } => {
                         if arguments.len() != args.len() {
-                            return Err(EvalError {
+                            return Err(EvalError::RuntimeError {
                                 line: Some(paren.line),
                                 place: Some(paren.lexeme.clone()),
                                 msg: format!(
@@ -243,7 +253,7 @@ impl Interpreter {
                         arity, function, ..
                     } => {
                         if arguments.len() != arity {
-                            return Err(EvalError {
+                            return Err(EvalError::RuntimeError {
                                 line: Some(paren.line),
                                 place: Some(paren.lexeme.clone()),
                                 msg: format!(
@@ -255,7 +265,7 @@ impl Interpreter {
                         }
                         Ok(function(arguments))
                     }
-                    _ => Err(EvalError {
+                    _ => Err(EvalError::RuntimeError {
                         line: Some(paren.line),
                         place: Some(paren.lexeme.clone()),
                         msg: "Can only call functions and classes.".to_string(),
@@ -294,7 +304,7 @@ impl Interpreter {
                     TokenType::Bang => Ok(Value::Bool(!Self::is_truthy(&right))),
                     TokenType::Minus => match right {
                         Value::Number(num) => Ok(Value::Number(-num)),
-                        _ => Err(EvalError {
+                        _ => Err(EvalError::RuntimeError {
                             line: Some(operator.line),
                             place: Some(operator.lexeme.clone()),
                             msg: "Unary minus can only be applied to number.".to_string(),
@@ -305,7 +315,7 @@ impl Interpreter {
             }
             Expr::Variable { name } => match self.environment.borrow().get(&name.lexeme) {
                 Ok(v) => Ok(v),
-                Err(e) => Err(EvalError {
+                Err(e) => Err(EvalError::RuntimeError {
                     line: Some(name.line),
                     place: Some(name.lexeme.clone()),
                     msg: e,
@@ -320,7 +330,7 @@ impl Interpreter {
     {
         match (left, right) {
             (Value::Number(l), Value::Number(r)) => Ok(op(l, r)),
-            _ => Err(EvalError {
+            _ => Err(EvalError::RuntimeError {
                 line: Some(token.line),
                 place: Some(token.lexeme.clone()),
                 msg: "Not both of left and right are number.".to_string(),
