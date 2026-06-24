@@ -1,0 +1,69 @@
+// basic closure: inner function captures outer variable
+fun makeCounter() {
+  var count = 0;
+  fun increment() {
+    count = count + 1;
+    print count;
+  }
+  return increment;
+}
+var counter = makeCounter();
+counter(); // 1
+counter(); // 2
+counter(); // 3
+
+// two independent closures share no state
+var c1 = makeCounter();
+var c2 = makeCounter();
+c1(); // 1
+c2(); // 1
+c1(); // 2
+
+// closure captures the variable itself, not the value at definition time
+fun makeAdder(x) {
+  fun add(y) {
+    return x + y;
+  }
+  return add;
+}
+var add5 = makeAdder(5);
+var add10 = makeAdder(10);
+print add5(3);  // 8
+print add10(3); // 13
+
+// closure over a loop variable (each iteration gets its own binding)
+fun makeMultiplier(factor) {
+  fun multiply(n) {
+    return factor * n;
+  }
+  return multiply;
+}
+var double = makeMultiplier(2);
+var triple = makeMultiplier(3);
+print double(4); // 8
+print triple(4); // 12
+
+// returned function still sees its closure after the outer function has returned
+fun outer() {
+  var secret = "captured";
+  fun inner() {
+    print secret;
+  }
+  return inner;
+}
+var fn = outer();
+fn(); // captured
+
+// closure can mutate captured variable
+fun makeAccumulator() {
+  var total = 0;
+  fun add(n) {
+    total = total + n;
+    return total;
+  }
+  return add;
+}
+var acc = makeAccumulator();
+print acc(10); // 10
+print acc(20); // 30
+print acc(5);  // 35

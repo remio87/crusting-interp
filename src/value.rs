@@ -1,5 +1,7 @@
+use std::cell::RefCell;
 use std::rc::Rc;
 
+use crate::environment::Environment;
 use crate::stmt::Stmt;
 use crate::token::LiteralValue;
 use crate::token::Token;
@@ -12,6 +14,7 @@ pub enum Value {
     LoxFunction {
         name: String,
         args: Vec<Token>,
+        closure: Rc<RefCell<Environment>>,
         body: Vec<Stmt>,
     },
     NativeFunction {
@@ -33,11 +36,13 @@ impl PartialEq for Value {
                     name: l_name,
                     args: l_args,
                     body: l_body,
+                    ..
                 },
                 Self::LoxFunction {
                     name: r_name,
                     args: r_args,
                     body: r_body,
+                    ..
                 },
             ) => l_name == r_name && l_args == r_args && l_body == r_body,
             (Self::NativeFunction { .. }, Self::NativeFunction { .. }) => false,
@@ -53,7 +58,9 @@ impl std::fmt::Debug for Value {
             Self::Number(arg0) => f.debug_tuple("Number").field(arg0).finish(),
             Self::Str(arg0) => f.debug_tuple("Str").field(arg0).finish(),
             Self::Bool(arg0) => f.debug_tuple("Bool").field(arg0).finish(),
-            Self::LoxFunction { name, args, body } => f
+            Self::LoxFunction {
+                name, args, body, ..
+            } => f
                 .debug_struct("LoxFunction")
                 .field("name", name)
                 .field("args", args)

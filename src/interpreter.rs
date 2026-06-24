@@ -49,7 +49,6 @@ type EvalResult = Result<Value, EvalError>;
 
 pub struct Interpreter {
     environment: Rc<RefCell<Environment>>,
-    global: Rc<RefCell<Environment>>,
 }
 
 impl Interpreter {
@@ -73,7 +72,6 @@ impl Interpreter {
         let environment = Rc::new(RefCell::new(environment));
         Interpreter {
             environment: Rc::clone(&environment),
-            global: Rc::clone(&environment),
         }
     }
 
@@ -127,6 +125,7 @@ impl Interpreter {
                     Value::LoxFunction {
                         name: name.lexeme.clone(),
                         args: params.clone(),
+                        closure: Rc::clone(&self.environment),
                         body: body.clone(),
                     },
                 );
@@ -254,7 +253,12 @@ impl Interpreter {
                     .map(|arg| self.eval(arg))
                     .collect::<Result<Vec<_>, _>>()?;
                 match callee {
-                    Value::LoxFunction { args, body, .. } => {
+                    Value::LoxFunction {
+                        args,
+                        closure,
+                        body,
+                        ..
+                    } => {
                         if arguments.len() != args.len() {
                             return Err(EvalError::RuntimeError {
                                 line: Some(paren.line),
@@ -266,7 +270,7 @@ impl Interpreter {
                                 ),
                             });
                         }
-                        let mut environment = Environment::new(Some(Rc::clone(&self.global)));
+                        let mut environment = Environment::new(Some(closure));
                         args.iter()
                             .zip(arguments.iter())
                             .for_each(|(token, value)| {
