@@ -31,20 +31,7 @@ impl PartialEq for Value {
             (Self::Number(l0), Self::Number(r0)) => l0 == r0,
             (Self::Str(l0), Self::Str(r0)) => l0 == r0,
             (Self::Bool(l0), Self::Bool(r0)) => l0 == r0,
-            (
-                Self::LoxFunction {
-                    name: l_name,
-                    args: l_args,
-                    body: l_body,
-                    ..
-                },
-                Self::LoxFunction {
-                    name: r_name,
-                    args: r_args,
-                    body: r_body,
-                    ..
-                },
-            ) => l_name == r_name && l_args == r_args && l_body == r_body,
+            (Self::LoxFunction { .. }, Self::LoxFunction { .. }) => false,
             (Self::NativeFunction { .. }, Self::NativeFunction { .. }) => false,
             (Self::Nil, Self::Nil) => true,
             _ => false,
