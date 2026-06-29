@@ -6,6 +6,7 @@ use crate::token_type::TokenType;
 use crate::value::Value;
 
 use std::cell::RefCell;
+use std::collections::HashMap;
 use std::rc::Rc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -49,6 +50,7 @@ type EvalResult = Result<Value, EvalError>;
 
 pub struct Interpreter {
     environment: Rc<RefCell<Environment>>,
+    locals: HashMap<*const Expr, usize>,
 }
 
 impl Interpreter {
@@ -72,7 +74,12 @@ impl Interpreter {
         let environment = Rc::new(RefCell::new(environment));
         Interpreter {
             environment: Rc::clone(&environment),
+            locals: HashMap::new(),
         }
+    }
+
+    pub fn resolve(&mut self, expr: &Expr, depth: usize) {
+        self.locals.insert(expr as *const Expr, depth);
     }
 
     pub fn interpret(&mut self, statements: Vec<Stmt>) -> EvalResult {
@@ -176,17 +183,36 @@ impl Interpreter {
         match expr {
             Expr::Assign { name, value } => {
                 let value = self.eval(value)?;
-                match self
-                    .environment
-                    .borrow_mut()
-                    .assign(name.lexeme.clone(), value.clone())
-                {
-                    Ok(()) => Ok(value),
-                    Err(e) => Err(EvalError::RuntimeError {
-                        line: Some(name.line),
-                        place: Some(name.lexeme.clone()),
-                        msg: e,
-                    }),
+                match self.locals.get(&(expr as *const Expr)) {
+                    Some(&distance) => {
+                        match Environment::assign_at(
+                            Rc::clone(&self.environment),
+                            distance,
+                            name.lexeme.clone(),
+                            value.clone(),
+                        ) {
+                            Ok(_) => Ok(value),
+                            Err(e) => Err(EvalError::RuntimeError {
+                                line: Some(name.line),
+                                place: Some(name.lexeme.clone()),
+                                msg: e,
+                            }),
+                        }
+                    }
+                    None => {
+                        match self
+                            .environment
+                            .borrow_mut()
+                            .assign(name.lexeme.clone(), value.clone())
+                        {
+                            Ok(()) => Ok(value),
+                            Err(e) => Err(EvalError::RuntimeError {
+                                line: Some(name.line),
+                                place: Some(name.lexeme.clone()),
+                                msg: e,
+                            }),
+                        }
+                    }
                 }
             }
             Expr::Binary {
@@ -345,14 +371,29 @@ impl Interpreter {
                     _ => unreachable!(),
                 }
             }
-            Expr::Variable { name } => match self.environment.borrow().get(&name.lexeme) {
+            Expr::Variable { name } => self.look_up_variable(name, expr),
+        }
+    }
+
+    fn look_up_variable(&mut self, name: &Token, expr: &Expr) -> EvalResult {
+        if let Some(&distance) = self.locals.get(&(expr as *const Expr)) {
+            match Environment::get_at(Rc::clone(&self.environment), distance, &name.lexeme) {
                 Ok(v) => Ok(v),
                 Err(e) => Err(EvalError::RuntimeError {
                     line: Some(name.line),
                     place: Some(name.lexeme.clone()),
                     msg: e,
                 }),
-            },
+            }
+        } else {
+            match self.environment.borrow().get(name.lexeme.as_str()) {
+                Ok(v) => Ok(v),
+                Err(e) => Err(EvalError::RuntimeError {
+                    line: Some(name.line),
+                    place: Some(name.lexeme.clone()),
+                    msg: e,
+                }),
+            }
         }
     }
 
