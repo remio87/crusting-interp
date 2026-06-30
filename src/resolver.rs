@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use crate::{expr::Expr, interpreter::Interpreter, stmt::Stmt, token::Token};
 
 #[derive(Debug)]
-struct ResolveError {
+pub struct ResolveError {
     line: Option<usize>,
     place: Option<String>,
     msg: String,
@@ -20,18 +20,27 @@ impl std::fmt::Display for ResolveError {
     }
 }
 
-struct Resolver<'a> {
+pub struct Resolver<'a> {
     interpreter: &'a mut Interpreter,
     scopes: Vec<HashMap<String, bool>>,
     errors: Vec<ResolveError>,
 }
 
 impl<'a> Resolver<'a> {
-    fn new(interpreter: &mut Interpreter) -> Resolver<'_> {
+    pub fn new(interpreter: &mut Interpreter) -> Resolver<'_> {
         Resolver {
             interpreter,
             scopes: Vec::new(),
             errors: Vec::new(),
+        }
+    }
+
+    pub fn resolve(mut self, stmts: &[Stmt]) -> Result<(), Vec<ResolveError>> {
+        self.resolve_stmts(stmts);
+        if self.errors.is_empty() {
+            Ok(())
+        } else {
+            Err(self.errors)
         }
     }
 
@@ -145,6 +154,13 @@ impl<'a> Resolver<'a> {
 
     fn declare(&mut self, name: &Token) {
         if let Some(scope) = self.scopes.last_mut() {
+            if scope.contains_key(&name.lexeme) {
+                self.errors.push(ResolveError {
+                    line: Some(name.line),
+                    place: Some(name.lexeme.clone()),
+                    msg: "Already a variable with this name in this scope.".to_string(),
+                });
+            }
             scope.insert(name.lexeme.clone(), false);
         }
     }

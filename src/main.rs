@@ -19,6 +19,7 @@ use std::path::Path;
 use std::process::exit;
 
 use crate::parser::Parser;
+use crate::resolver::Resolver;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -71,6 +72,15 @@ fn run(interpreter: &mut Interpreter, code: &str) -> Result<(), Box<dyn Error>> 
             .collect::<Vec<_>>()
             .join("\n")
     })?;
+    Resolver::new(interpreter)
+        .resolve(&statements)
+        .map_err(|errors| {
+            errors
+                .iter()
+                .map(|e| e.to_string())
+                .collect::<Vec<_>>()
+                .join("\n")
+        })?;
     interpreter.interpret(statements)?;
     Ok(())
 }
