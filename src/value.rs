@@ -15,7 +15,7 @@ pub enum Value {
         name: String,
         args: Vec<Token>,
         closure: Rc<RefCell<Environment>>,
-        body: Vec<Stmt>,
+        body: Rc<Vec<Stmt>>,
     },
     NativeFunction {
         name: String,

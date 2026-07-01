@@ -135,7 +135,7 @@ impl Interpreter {
                         name: name.lexeme.clone(),
                         args: params.clone(),
                         closure: Rc::clone(&self.environment),
-                        body: body.clone(),
+                        body: Rc::clone(body),
                     },
                 );
                 Ok(Value::Nil)

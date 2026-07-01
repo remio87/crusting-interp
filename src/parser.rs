@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use crate::expr::Expr;
 use crate::stmt::Stmt;
 use crate::token::{LiteralValue, Token};
@@ -116,7 +118,11 @@ impl Parser {
         )?;
         let body = self.block_statements()?;
 
-        Ok(Stmt::Function { name, params, body })
+        Ok(Stmt::Function {
+            name,
+            params,
+            body: Rc::new(body),
+        })
     }
 
     fn statement(&mut self) -> ParseResult<Stmt> {
