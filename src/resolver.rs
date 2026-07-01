@@ -20,9 +20,16 @@ impl std::fmt::Display for ResolveError {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+enum FunctionType {
+    None,
+    Function,
+}
+
 pub struct Resolver<'a> {
     interpreter: &'a mut Interpreter,
     scopes: Vec<HashMap<String, bool>>,
+    current_function: FunctionType,
     errors: Vec<ResolveError>,
 }
 
@@ -31,6 +38,7 @@ impl<'a> Resolver<'a> {
         Resolver {
             interpreter,
             scopes: Vec::new(),
+            current_function: FunctionType::None,
             errors: Vec::new(),
         }
     }
@@ -63,7 +71,7 @@ impl<'a> Resolver<'a> {
             Stmt::Function { name, params, body } => {
                 self.declare(name);
                 self.define(name);
-                self.resolve_function(params, body);
+                self.resolve_function(params, body, FunctionType::Function);
             }
             Stmt::If {
                 condition,
@@ -77,7 +85,15 @@ impl<'a> Resolver<'a> {
                 }
             }
             Stmt::Print { expression } => self.resolve_expr(expression),
-            Stmt::Return { value, .. } => {
+            Stmt::Return { keyword, value } => {
+                if self.current_function == FunctionType::None {
+                    self.errors.push(ResolveError {
+                        line: Some(keyword.line),
+                        place: Some(keyword.lexeme.clone()),
+                        msg: "Can't return from top-level code.".to_string(),
+                    });
+                }
+
                 if let Some(value) = value {
                     self.resolve_expr(value);
                 }
@@ -94,7 +110,10 @@ impl<'a> Resolver<'a> {
         }
     }
 
-    fn resolve_function(&mut self, params: &[Token], body: &[Stmt]) {
+    fn resolve_function(&mut self, params: &[Token], body: &[Stmt], fn_type: FunctionType) {
+        let enclosing_function = self.current_function;
+        self.current_function = fn_type;
+
         self.begin_scope();
         for param in params {
             self.declare(param);
@@ -102,6 +121,8 @@ impl<'a> Resolver<'a> {
         }
         self.resolve_stmts(body);
         self.end_scope();
+
+        self.current_function = enclosing_function;
     }
 
     fn resolve_expr(&mut self, expr: &Expr) {
