@@ -49,14 +49,15 @@ impl std::error::Error for EvalError {}
 type EvalResult = Result<Value, EvalError>;
 
 pub struct Interpreter {
+    globals: Rc<RefCell<Environment>>,
     environment: Rc<RefCell<Environment>>,
     locals: HashMap<*const Expr, usize>,
 }
 
 impl Interpreter {
     pub fn new() -> Self {
-        let mut environment = Environment::new(None);
-        environment.define(
+        let mut globals = Environment::new(None);
+        globals.define(
             "clock".to_string(),
             Value::NativeFunction {
                 name: "clock".to_string(),
@@ -71,9 +72,10 @@ impl Interpreter {
                 }),
             },
         );
-        let environment = Rc::new(RefCell::new(environment));
+        let globals = Rc::new(RefCell::new(globals));
         Interpreter {
-            environment: Rc::clone(&environment),
+            globals: Rc::clone(&globals),
+            environment: Rc::clone(&globals),
             locals: HashMap::new(),
         }
     }
@@ -386,7 +388,7 @@ impl Interpreter {
                 }),
             }
         } else {
-            match self.environment.borrow().get(name.lexeme.as_str()) {
+            match self.globals.borrow().get(name.lexeme.as_str()) {
                 Ok(v) => Ok(v),
                 Err(e) => Err(EvalError::RuntimeError {
                     line: Some(name.line),
