@@ -74,13 +74,31 @@ impl Parser {
     }
 
     fn declaration(&mut self) -> ParseResult<Stmt> {
-        if self.match_expr(&[TokenType::Fun]) {
+        if self.match_expr(&[TokenType::Class]) {
+            self.class_declaration()
+        } else if self.match_expr(&[TokenType::Fun]) {
             self.function("function")
         } else if self.match_expr(&[TokenType::Var]) {
             self.var_declaration()
         } else {
             self.statement()
         }
+    }
+
+    fn class_declaration(&mut self) -> ParseResult<Stmt> {
+        let name = self
+            .consume(TokenType::Identifier, "Expect class name")?
+            .clone();
+        self.consume(TokenType::LeftBrace, "Expect '{' before class body.")?;
+
+        let mut methods: Vec<Stmt> = Vec::new();
+        while !self.check(TokenType::RightBrace) && !self.is_at_end() {
+            methods.push(self.function("method")?);
+        }
+
+        self.consume(TokenType::RightBrace, "Expect '}' after class body.")?;
+
+        Ok(Stmt::Class { name, methods })
     }
 
     fn function(&mut self, kind: &str) -> ParseResult<Stmt> {

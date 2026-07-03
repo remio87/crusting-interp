@@ -1,3 +1,4 @@
+mod class;
 mod environment;
 mod expr;
 mod interpreter;

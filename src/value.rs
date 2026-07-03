@@ -1,6 +1,7 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
+use crate::class::Class;
 use crate::environment::Environment;
 use crate::stmt::Stmt;
 use crate::token::LiteralValue;
@@ -22,6 +23,7 @@ pub enum Value {
         arity: usize,
         function: Rc<dyn Fn(Vec<Value>) -> Value>,
     },
+    LoxClass(Rc<Class>),
     Nil,
 }
 
@@ -59,6 +61,7 @@ impl std::fmt::Debug for Value {
                 .field("arity", arity)
                 .field("function", &"<native fn>")
                 .finish(),
+            Self::LoxClass(arg0) => f.debug_tuple("LoxClass").field(arg0).finish(),
             Self::Nil => write!(f, "Nil"),
         }
     }
@@ -83,6 +86,9 @@ impl std::fmt::Display for Value {
             }
             Value::NativeFunction { name, .. } => {
                 write!(f, "NativeFn {}", name)
+            }
+            Value::LoxClass(c) => {
+                write!(f, "LoxClass {}", c.name)
             }
             Value::Nil => write!(f, "nil"),
         }

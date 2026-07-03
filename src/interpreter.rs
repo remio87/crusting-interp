@@ -1,3 +1,4 @@
+use crate::class::Class;
 use crate::environment::Environment;
 use crate::expr::Expr;
 use crate::stmt::Stmt;
@@ -123,6 +124,17 @@ impl Interpreter {
                     &self.environment,
                 )))));
                 self.execute_block(statements, environment)
+            }
+            Stmt::Class { name, .. } => {
+                self.environment
+                    .borrow_mut()
+                    .define(name.lexeme.to_string(), Value::Nil);
+                let class = Value::LoxClass(Rc::new(Class::new(name.lexeme.as_ref())));
+                self.environment
+                    .borrow_mut()
+                    .assign(name.lexeme.to_string(), class)
+                    .unwrap();
+                Ok(Value::Nil)
             }
             Stmt::Expression { expression } => {
                 self.eval(expression)?;
@@ -420,6 +432,7 @@ impl Interpreter {
             Value::Bool(b) => *b,
             Value::LoxFunction { .. } => true,
             Value::NativeFunction { .. } => true,
+            Value::LoxClass(_) => true,
             Value::Nil => false,
         }
     }
