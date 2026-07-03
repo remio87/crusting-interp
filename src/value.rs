@@ -3,6 +3,7 @@ use std::rc::Rc;
 
 use crate::class::Class;
 use crate::environment::Environment;
+use crate::instance::Instance;
 use crate::stmt::Stmt;
 use crate::token::LiteralValue;
 use crate::token::Token;
@@ -24,6 +25,7 @@ pub enum Value {
         function: Rc<dyn Fn(Vec<Value>) -> Value>,
     },
     LoxClass(Rc<Class>),
+    LoxInstance(Rc<Instance>),
     Nil,
 }
 
@@ -62,6 +64,7 @@ impl std::fmt::Debug for Value {
                 .field("function", &"<native fn>")
                 .finish(),
             Self::LoxClass(arg0) => f.debug_tuple("LoxClass").field(arg0).finish(),
+            Self::LoxInstance(arg0) => f.debug_tuple("LoxInstance").field(arg0).finish(),
             Self::Nil => write!(f, "Nil"),
         }
     }
@@ -89,6 +92,9 @@ impl std::fmt::Display for Value {
             }
             Value::LoxClass(c) => {
                 write!(f, "LoxClass {}", c.name)
+            }
+            Value::LoxInstance(i) => {
+                write!(f, "LoxInstance {}", i.class.name)
             }
             Value::Nil => write!(f, "nil"),
         }

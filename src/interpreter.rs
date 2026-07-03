@@ -1,6 +1,7 @@
 use crate::class::Class;
 use crate::environment::Environment;
 use crate::expr::Expr;
+use crate::instance::Instance;
 use crate::stmt::Stmt;
 use crate::token::Token;
 use crate::token_type::TokenType;
@@ -293,6 +294,7 @@ impl Interpreter {
                     .map(|arg| self.eval(arg))
                     .collect::<Result<Vec<_>, _>>()?;
                 match callee {
+                    Value::LoxClass(class) => Ok(Value::LoxInstance(Rc::new(Instance::new(class)))),
                     Value::LoxFunction {
                         args,
                         closure,
@@ -433,6 +435,7 @@ impl Interpreter {
             Value::LoxFunction { .. } => true,
             Value::NativeFunction { .. } => true,
             Value::LoxClass(_) => true,
+            Value::LoxInstance(_) => true,
             Value::Nil => false,
         }
     }

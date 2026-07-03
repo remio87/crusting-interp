@@ -1,6 +1,7 @@
 mod class;
 mod environment;
 mod expr;
+mod instance;
 mod interpreter;
 mod parser;
 mod resolver;
