@@ -1,0 +1,56 @@
+// basic set then get
+class Bagel {}
+var bagel = Bagel();
+bagel.flavor = "plain";
+print bagel.flavor; // plain
+
+// printing an instance
+print bagel; // LoxInstance Bagel
+
+// each instance has its own fields
+var bagel2 = Bagel();
+bagel2.flavor = "everything";
+print bagel.flavor;  // plain
+print bagel2.flavor; // everything
+
+// reassigning a field overwrites the old value
+bagel.flavor = "sesame";
+print bagel.flavor; // sesame
+
+// a field can hold any value type
+class Box {}
+var box = Box();
+box.number = 42;
+box.text = "hi";
+box.flag = true;
+box.empty = nil;
+print box.number; // 42
+print box.text;   // hi
+print box.flag;   // true
+print box.empty;  // nil
+
+// a field can hold a function
+fun sayHi() {
+  print "hi from field";
+}
+box.action = sayHi;
+box.action(); // hi from field
+
+// a field can hold another instance (nested get)
+class Pair {}
+var pair = Pair();
+pair.first = Box();
+pair.first.number = 7;
+print pair.first.number; // 7
+
+// set expression evaluates to the assigned value
+var result = (bagel.flavor = "poppy");
+print result;       // poppy
+print bagel.flavor; // poppy
+
+// setting a field twice in one expression via chained assignment
+var a = Bagel();
+var b = Bagel();
+a.flavor = b.flavor = "shared";
+print a.flavor; // shared
+print b.flavor; // shared
