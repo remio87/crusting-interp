@@ -16,6 +16,10 @@ pub enum Expr {
         paren: Token,
         arguments: Vec<Expr>,
     },
+    Get {
+        object: Box<Expr>,
+        name: Token,
+    },
     Grouping {
         expression: Box<Expr>,
     },
@@ -26,6 +30,11 @@ pub enum Expr {
         left: Box<Expr>,
         operator: Token,
         right: Box<Expr>,
+    },
+    Set {
+        object: Box<Expr>,
+        name: Token,
+        value: Box<Expr>,
     },
     Unary {
         operator: Token,
@@ -60,6 +69,9 @@ impl std::fmt::Display for Expr {
                 arguments.iter().for_each(|e| expressions.push(e));
                 write!(f, "{}", parenthesize("call", &expressions))
             }
+            Expr::Get { object, .. } => {
+                write!(f, "{}", parenthesize("get", &[object]))
+            }
             Expr::Grouping { expression } => {
                 write!(f, "{}", parenthesize("group", &[expression.as_ref()]))
             }
@@ -75,6 +87,11 @@ impl std::fmt::Display for Expr {
                 "{}",
                 parenthesize(&operator.lexeme, &[left.as_ref(), right.as_ref()])
             ),
+            Expr::Set {
+                object,
+                name: _,
+                value,
+            } => write!(f, "{}", parenthesize("set", &[object, value])),
             Expr::Unary { operator, right } => {
                 write!(f, "{}", parenthesize(&operator.lexeme, &[right.as_ref()]))
             }

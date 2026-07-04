@@ -25,7 +25,7 @@ pub enum Value {
         function: Rc<dyn Fn(Vec<Value>) -> Value>,
     },
     LoxClass(Rc<Class>),
-    LoxInstance(Rc<Instance>),
+    LoxInstance(Rc<RefCell<Instance>>),
     Nil,
 }
 
@@ -94,7 +94,7 @@ impl std::fmt::Display for Value {
                 write!(f, "LoxClass {}", c.name)
             }
             Value::LoxInstance(i) => {
-                write!(f, "LoxInstance {}", i.class.name)
+                write!(f, "LoxInstance {}", i.borrow().class.name)
             }
             Value::Nil => write!(f, "nil"),
         }

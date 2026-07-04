@@ -294,7 +294,9 @@ impl Interpreter {
                     .map(|arg| self.eval(arg))
                     .collect::<Result<Vec<_>, _>>()?;
                 match callee {
-                    Value::LoxClass(class) => Ok(Value::LoxInstance(Rc::new(Instance::new(class)))),
+                    Value::LoxClass(class) => Ok(Value::LoxInstance(Rc::new(RefCell::new(
+                        Instance::new(class),
+                    )))),
                     Value::LoxFunction {
                         args,
                         closure,
@@ -346,6 +348,23 @@ impl Interpreter {
                     }),
                 }
             }
+            Expr::Get { object, name } => {
+                let object = self.eval(object)?;
+                match object {
+                    Value::LoxInstance(instance) => {
+                        instance.borrow().get(name).ok_or(EvalError::RuntimeError {
+                            line: Some(name.line),
+                            place: Some(name.lexeme.clone()),
+                            msg: format!("Undefined property '{}'", name.lexeme),
+                        })
+                    }
+                    _ => Err(EvalError::RuntimeError {
+                        line: Some(name.line),
+                        place: Some(name.lexeme.clone()),
+                        msg: "Only instances have properties.".to_string(),
+                    }),
+                }
+            }
             Expr::Grouping { expression } => self.eval(expression),
             Expr::Literal { value } => Ok(value.clone().into()),
             Expr::Logical {
@@ -370,6 +389,25 @@ impl Interpreter {
                         }
                     }
                     _ => unreachable!("Invalid logical operator."),
+                }
+            }
+            Expr::Set {
+                object,
+                name,
+                value,
+            } => {
+                let object = self.eval(object)?;
+                match object {
+                    Value::LoxInstance(instance) => {
+                        let value = self.eval(value)?;
+                        instance.borrow_mut().set(name, &value);
+                        Ok(value)
+                    }
+                    _ => Err(EvalError::RuntimeError {
+                        line: Some(name.line),
+                        place: Some(name.lexeme.clone()),
+                        msg: "Only instances have fields.".to_string(),
+                    }),
                 }
             }
             Expr::Unary { operator, right } => {

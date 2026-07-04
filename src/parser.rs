@@ -312,6 +312,13 @@ impl Parser {
             let value = self.assignment()?;
 
             match expr {
+                Expr::Get { object, name } => {
+                    return Ok(Expr::Set {
+                        object,
+                        name,
+                        value: Box::new(value),
+                    });
+                }
                 Expr::Variable { name } => {
                     return Ok(Expr::Assign {
                         name,
@@ -449,6 +456,13 @@ impl Parser {
         loop {
             if self.match_expr(&[TokenType::LeftParen]) {
                 expr = self.finish_call(expr)?;
+            } else if self.match_expr(&[TokenType::Dot]) {
+                let name =
+                    self.consume(TokenType::Identifier, "Expect property name after '.'.")?;
+                expr = Expr::Get {
+                    object: Box::new(expr),
+                    name: name.clone(),
+                }
             } else {
                 break;
             }

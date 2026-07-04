@@ -147,6 +147,9 @@ impl<'a> Resolver<'a> {
                     self.resolve_expr(arg);
                 }
             }
+            Expr::Get { object, .. } => {
+                self.resolve_expr(object);
+            }
             Expr::Grouping { expression } => {
                 self.resolve_expr(expression);
             }
@@ -154,6 +157,14 @@ impl<'a> Resolver<'a> {
             Expr::Logical { left, right, .. } => {
                 self.resolve_expr(left);
                 self.resolve_expr(right);
+            }
+            Expr::Set {
+                object,
+                name: _,
+                value,
+            } => {
+                self.resolve_expr(object);
+                self.resolve_expr(value);
             }
             Expr::Unary { right, .. } => self.resolve_expr(right),
             Expr::Variable { name } => {
