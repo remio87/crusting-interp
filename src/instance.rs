@@ -17,7 +17,10 @@ impl Instance {
     }
 
     pub fn get(&self, name: &Token) -> Option<Value> {
-        self.fields.get(&name.lexeme).cloned()
+        self.fields
+            .get(&name.lexeme)
+            .or_else(|| self.class.find_method(&name.lexeme))
+            .cloned()
     }
 
     pub fn set(&mut self, name: &Token, value: &Value) {

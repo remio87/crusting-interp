@@ -24,6 +24,7 @@ impl std::fmt::Display for ResolveError {
 enum FunctionType {
     None,
     Function,
+    Method,
 }
 
 pub struct Resolver<'a> {
@@ -65,9 +66,25 @@ impl<'a> Resolver<'a> {
                 self.resolve_stmts(statements);
                 self.end_scope();
             }
-            Stmt::Class { name, methods: _ } => {
+            Stmt::Class { name, methods } => {
                 self.declare(name);
                 self.define(name);
+                for method in methods {
+                    match method {
+                        Stmt::Function {
+                            name: _,
+                            params,
+                            body,
+                        } => {
+                            self.resolve_function(params, body, FunctionType::Method);
+                        }
+                        _ => self.errors.push(ResolveError {
+                            line: Some(name.line),
+                            place: Some(name.lexeme.clone()),
+                            msg: "Methods need to be function statement.".to_string(),
+                        }),
+                    }
+                }
             }
             Stmt::Expression { expression } => {
                 self.resolve_expr(expression);

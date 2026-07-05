@@ -126,11 +126,34 @@ impl Interpreter {
                 )))));
                 self.execute_block(statements, environment)
             }
-            Stmt::Class { name, .. } => {
+            Stmt::Class { name, methods } => {
                 self.environment
                     .borrow_mut()
                     .define(name.lexeme.to_string(), Value::Nil);
-                let class = Value::LoxClass(Rc::new(Class::new(name.lexeme.as_ref())));
+
+                let mut methods_map: HashMap<String, Value> = HashMap::new();
+                for method in methods {
+                    match method {
+                        Stmt::Function { name, params, body } => {
+                            let function = Value::LoxFunction {
+                                name: name.lexeme.clone(),
+                                args: params.clone(),
+                                closure: Rc::clone(&self.environment),
+                                body: Rc::clone(body),
+                            };
+                            methods_map.insert(name.lexeme.clone(), function);
+                        }
+                        _ => {
+                            return Err(EvalError::RuntimeError {
+                                line: Some(name.line),
+                                place: Some(name.lexeme.clone()),
+                                msg: "Methods need to be function statement.".to_string(),
+                            });
+                        }
+                    }
+                }
+
+                let class = Value::LoxClass(Rc::new(Class::new(name.lexeme.as_ref(), methods_map)));
                 self.environment
                     .borrow_mut()
                     .assign(name.lexeme.to_string(), class)
