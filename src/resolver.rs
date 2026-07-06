@@ -27,10 +27,17 @@ enum FunctionType {
     Method,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+enum ClassType {
+    None,
+    Class,
+}
+
 pub struct Resolver<'a> {
     interpreter: &'a mut Interpreter,
     scopes: Vec<HashMap<String, bool>>,
     current_function: FunctionType,
+    current_class: ClassType,
     errors: Vec<ResolveError>,
 }
 
@@ -40,6 +47,7 @@ impl<'a> Resolver<'a> {
             interpreter,
             scopes: Vec::new(),
             current_function: FunctionType::None,
+            current_class: ClassType::None,
             errors: Vec::new(),
         }
     }
@@ -67,8 +75,17 @@ impl<'a> Resolver<'a> {
                 self.end_scope();
             }
             Stmt::Class { name, methods } => {
+                let enclosing_class = self.current_class;
+                self.current_class = ClassType::Class;
                 self.declare(name);
                 self.define(name);
+
+                self.begin_scope();
+                self.scopes
+                    .last_mut()
+                    .unwrap()
+                    .insert("this".to_string(), true);
+
                 for method in methods {
                     match method {
                         Stmt::Function {
@@ -85,6 +102,9 @@ impl<'a> Resolver<'a> {
                         }),
                     }
                 }
+
+                self.end_scope();
+                self.current_class = enclosing_class;
             }
             Stmt::Expression { expression } => {
                 self.resolve_expr(expression);
@@ -182,6 +202,17 @@ impl<'a> Resolver<'a> {
             } => {
                 self.resolve_expr(object);
                 self.resolve_expr(value);
+            }
+            Expr::This { keyword } => {
+                if self.current_class == ClassType::None {
+                    self.errors.push(ResolveError {
+                        line: Some(keyword.line),
+                        place: Some(keyword.lexeme.clone()),
+                        msg: "Can't use 'this' outside a class.".to_string(),
+                    })
+                } else {
+                    self.resolve_local(expr, keyword);
+                }
             }
             Expr::Unary { right, .. } => self.resolve_expr(right),
             Expr::Variable { name } => {

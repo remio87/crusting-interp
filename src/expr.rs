@@ -36,6 +36,9 @@ pub enum Expr {
         name: Token,
         value: Box<Expr>,
     },
+    This {
+        keyword: Token,
+    },
     Unary {
         operator: Token,
         right: Box<Expr>,
@@ -92,6 +95,9 @@ impl std::fmt::Display for Expr {
                 name: _,
                 value,
             } => write!(f, "{}", parenthesize("set", &[object, value])),
+            Expr::This { .. } => {
+                write!(f, "{}", "this")
+            }
             Expr::Unary { operator, right } => {
                 write!(f, "{}", parenthesize(&operator.lexeme, &[right.as_ref()]))
             }

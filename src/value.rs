@@ -29,6 +29,29 @@ pub enum Value {
     Nil,
 }
 
+impl Value {
+    pub fn bind(&self, instance: Rc<RefCell<Instance>>) -> Self {
+        match self {
+            Value::LoxFunction {
+                name,
+                args,
+                closure,
+                body,
+            } => {
+                let mut environment = Environment::new(Some(Rc::clone(closure)));
+                environment.define("this".to_string(), Value::LoxInstance(Rc::clone(&instance)));
+                Value::LoxFunction {
+                    name: name.clone(),
+                    args: args.clone(),
+                    closure: Rc::new(RefCell::new(environment)),
+                    body: Rc::clone(body),
+                }
+            }
+            _ => unreachable!(),
+        }
+    }
+}
+
 impl PartialEq for Value {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {

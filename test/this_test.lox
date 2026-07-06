@@ -1,0 +1,61 @@
+// this refers to the instance a method was called on
+class Cake {
+  taste() {
+    print "The " + this.flavor + " cake is delicious!";
+  }
+}
+var cake = Cake();
+cake.flavor = "German chocolate";
+cake.taste(); // The German chocolate cake is delicious!
+
+// this lets a method read and mutate the instance's own fields
+class Counter {
+  reset() {
+    this.count = 0;
+  }
+  bump() {
+    this.count = this.count + 1;
+    return this.count;
+  }
+}
+var counter = Counter();
+counter.reset();
+print counter.bump(); // 1
+print counter.bump(); // 2
+print counter.bump(); // 3
+
+// each instance keeps its own state behind this
+var counter2 = Counter();
+counter2.reset();
+print counter2.bump(); // 1
+print counter.bump();  // 4
+
+// a bound method remembers the instance it was pulled from,
+// even when stored in a variable and called later
+class Thing {
+  getName() {
+    return this.name;
+  }
+}
+var thing = Thing();
+thing.name = "thing1";
+var getName = thing.getName;
+print getName(); // thing1
+
+// ...and keeps pointing at that instance even if the original
+// variable is reassigned afterward
+class Person {
+  sayName() {
+    print this.name;
+  }
+}
+var person = Person();
+person.name = "Alice";
+var greet = person.sayName;
+person = nil;
+greet(); // Alice
+
+// using `this` outside of any class is a resolver error and
+// should print nothing when run in isolation, so it is commented
+// out here rather than executed:
+// print this;

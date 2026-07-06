@@ -375,7 +375,7 @@ impl Interpreter {
                 let object = self.eval(object)?;
                 match object {
                     Value::LoxInstance(instance) => {
-                        instance.borrow().get(name).ok_or(EvalError::RuntimeError {
+                        Instance::get(instance, name).ok_or(EvalError::RuntimeError {
                             line: Some(name.line),
                             place: Some(name.lexeme.clone()),
                             msg: format!("Undefined property '{}'", name.lexeme),
@@ -433,6 +433,7 @@ impl Interpreter {
                     }),
                 }
             }
+            Expr::This { keyword } => self.look_up_variable(keyword, expr),
             Expr::Unary { operator, right } => {
                 let right = self.eval(right)?;
                 match operator.token_type {

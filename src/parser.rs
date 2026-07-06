@@ -524,6 +524,12 @@ impl Parser {
                         .expect("Literal value must be Some"),
                 })
             }
+            TokenType::This => {
+                self.advance();
+                Ok(Expr::This {
+                    keyword: self.previous().clone(),
+                })
+            }
             TokenType::Identifier => Ok(Expr::Variable {
                 name: self.advance().clone(),
             }),

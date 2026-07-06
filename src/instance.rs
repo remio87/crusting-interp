@@ -1,4 +1,4 @@
-use std::{collections::HashMap, rc::Rc};
+use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use crate::{class::Class, token::Token, value::Value};
 
@@ -16,11 +16,14 @@ impl Instance {
         }
     }
 
-    pub fn get(&self, name: &Token) -> Option<Value> {
-        self.fields
-            .get(&name.lexeme)
-            .or_else(|| self.class.find_method(&name.lexeme))
-            .cloned()
+    pub fn get(instance: Rc<RefCell<Instance>>, name: &Token) -> Option<Value> {
+        if let Some(field) = instance.borrow().fields.get(&name.lexeme) {
+            Some(field.clone())
+        } else if let Some(method) = instance.borrow().class.find_method(&name.lexeme) {
+            Some(method.bind(Rc::clone(&instance)))
+        } else {
+            None
+        }
     }
 
     pub fn set(&mut self, name: &Token, value: &Value) {
