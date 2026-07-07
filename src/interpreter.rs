@@ -317,9 +317,48 @@ impl Interpreter {
                     .map(|arg| self.eval(arg))
                     .collect::<Result<Vec<_>, _>>()?;
                 match callee {
-                    Value::LoxClass(class) => Ok(Value::LoxInstance(Rc::new(RefCell::new(
-                        Instance::new(class),
-                    )))),
+                    Value::LoxClass(class) => {
+                        let instance = Rc::new(RefCell::new(Instance::new(Rc::clone(&class))));
+                        let Some(initializer) = class.find_method("init") else {
+                            return Ok(Value::LoxInstance(instance));
+                        };
+                        let Value::LoxFunction { .. } = initializer else {
+                            unreachable!()
+                        };
+                        let Value::LoxFunction {
+                            name: _,
+                            args,
+                            closure,
+                            body,
+                        } = initializer.bind(Rc::clone(&instance))
+                        else {
+                            unreachable!()
+                        };
+                        if arguments.len() != args.len() {
+                            return Err(EvalError::RuntimeError {
+                                line: Some(paren.line),
+                                place: Some(paren.lexeme.clone()),
+                                msg: format!(
+                                    "Expected {} arguments, but got {}.",
+                                    args.len(),
+                                    arguments.len()
+                                ),
+                            });
+                        }
+                        let mut environment = Environment::new(Some(Rc::clone(&closure)));
+                        args.iter()
+                            .zip(arguments.iter())
+                            .for_each(|(token, value)| {
+                                environment.define(token.lexeme.clone(), value.clone());
+                            });
+                        if let e @ Err(EvalError::RuntimeError { .. }) =
+                            self.execute_block(&body, Rc::new(RefCell::new(environment)))
+                        {
+                            return e;
+                        }
+                        let instance = Value::LoxInstance(Rc::clone(&instance));
+                        Ok(instance)
+                    }
                     Value::LoxFunction {
                         args,
                         closure,

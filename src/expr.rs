@@ -96,7 +96,7 @@ impl std::fmt::Display for Expr {
                 value,
             } => write!(f, "{}", parenthesize("set", &[object, value])),
             Expr::This { .. } => {
-                write!(f, "{}", "this")
+                write!(f, "this")
             }
             Expr::Unary { operator, right } => {
                 write!(f, "{}", parenthesize(&operator.lexeme, &[right.as_ref()]))

@@ -1,0 +1,54 @@
+// init() runs automatically when the class is instantiated
+class Point {
+  init(x, y) {
+    this.x = x;
+    this.y = y;
+  }
+  sum() {
+    return this.x + this.y;
+  }
+}
+var p = Point(1, 2);
+print p.x;    // 1
+print p.y;    // 2
+print p.sum(); // 3
+
+// each instance gets its own state from its own init() call
+var q = Point(3, 4);
+print p.sum(); // 3
+print q.sum(); // 7
+
+// wrong number of arguments to init() is a runtime error, so this
+// is left commented out rather than executed:
+// var bad = Point(1);
+// Expected 2 arguments, but got 1.
+
+// a class with no init() still constructs fine
+class Bare {}
+var b = Bare();
+print b; // LoxInstance Bare
+
+// calling new Foo(...) always evaluates to the instance itself,
+// not whatever init() would otherwise "return"
+class Box {
+  init(value) {
+    this.value = value;
+  }
+}
+var box = Box(42);
+print box.value; // 42
+
+// a bare `return;` (no value) inside init() just exits early;
+// the constructor expression still evaluates to the instance
+class Guard {
+  init(x) {
+    this.x = x;
+    if (x > 0) return;
+    this.x = -1;
+  }
+}
+var g1 = Guard(5);
+print g1.x; // 5
+
+var g2 = Guard(-5);
+print g2.x; // -1
