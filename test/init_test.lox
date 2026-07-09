@@ -52,3 +52,20 @@ print g1.x; // 5
 
 var g2 = Guard(-5);
 print g2.x; // -1
+
+// init() can also be called explicitly on an existing instance,
+// re-running the initializer body against its fields
+var p2 = Point(1, 2);
+print p2.sum(); // 3
+p2.init(10, 20);
+print p2.sum(); // 30
+
+// an explicit init() call still evaluates to the instance's `this`,
+// not whatever the body would otherwise return
+var returned = p2.init(100, 200);
+print returned.sum(); // 300
+
+// wrong number of arguments to an explicit init() call is also a
+// runtime error, left commented out rather than executed:
+// p2.init(1);
+// Expected 2 arguments, but got 1.

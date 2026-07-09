@@ -140,6 +140,7 @@ impl Interpreter {
                                 args: params.clone(),
                                 closure: Rc::clone(&self.environment),
                                 body: Rc::clone(body),
+                                is_initializer: name.lexeme == "init",
                             };
                             methods_map.insert(name.lexeme.clone(), function);
                         }
@@ -172,6 +173,7 @@ impl Interpreter {
                         args: params.clone(),
                         closure: Rc::clone(&self.environment),
                         body: Rc::clone(body),
+                        is_initializer: false,
                     },
                 );
                 Ok(Value::Nil)
@@ -330,6 +332,7 @@ impl Interpreter {
                             args,
                             closure,
                             body,
+                            is_initializer: _,
                         } = initializer.bind(Rc::clone(&instance))
                         else {
                             unreachable!()
@@ -363,6 +366,7 @@ impl Interpreter {
                         args,
                         closure,
                         body,
+                        is_initializer,
                         ..
                     } => {
                         if arguments.len() != args.len() {
@@ -376,15 +380,28 @@ impl Interpreter {
                                 ),
                             });
                         }
-                        let mut environment = Environment::new(Some(closure));
+                        let mut environment = Environment::new(Some(Rc::clone(&closure)));
                         args.iter()
                             .zip(arguments.iter())
                             .for_each(|(token, value)| {
                                 environment.define(token.lexeme.clone(), value.clone());
                             });
-                        match self.execute_block(&body, Rc::new(RefCell::new(environment))) {
-                            Err(EvalError::Return(ret)) => Ok(ret.value),
-                            result => result,
+                        let return_value = self
+                            .execute_block(&body, Rc::new(RefCell::new(environment)))
+                            .or_else(|e| match e {
+                                EvalError::Return(ret) => Ok(ret.value),
+                                e => Err(e),
+                            })?;
+                        if is_initializer {
+                            Environment::get_at(closure, 0, "this").map_err(|e| {
+                                EvalError::RuntimeError {
+                                    line: Some(paren.line),
+                                    place: Some(paren.lexeme.clone()),
+                                    msg: e,
+                                }
+                            })
+                        } else {
+                            Ok(return_value)
                         }
                     }
                     Value::NativeFunction {

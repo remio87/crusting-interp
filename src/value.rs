@@ -18,6 +18,7 @@ pub enum Value {
         args: Vec<Token>,
         closure: Rc<RefCell<Environment>>,
         body: Rc<Vec<Stmt>>,
+        is_initializer: bool,
     },
     NativeFunction {
         name: String,
@@ -37,6 +38,7 @@ impl Value {
                 args,
                 closure,
                 body,
+                is_initializer,
             } => {
                 let mut environment = Environment::new(Some(Rc::clone(closure)));
                 environment.define("this".to_string(), Value::LoxInstance(Rc::clone(&instance)));
@@ -45,6 +47,7 @@ impl Value {
                     args: args.clone(),
                     closure: Rc::new(RefCell::new(environment)),
                     body: Rc::clone(body),
+                    is_initializer: *is_initializer,
                 }
             }
             _ => unreachable!(),
