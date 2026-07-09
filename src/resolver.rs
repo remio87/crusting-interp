@@ -24,6 +24,7 @@ impl std::fmt::Display for ResolveError {
 enum FunctionType {
     None,
     Function,
+    Initializer,
     Method,
 }
 
@@ -88,12 +89,16 @@ impl<'a> Resolver<'a> {
 
                 for method in methods {
                     match method {
-                        Stmt::Function {
-                            name: _,
-                            params,
-                            body,
-                        } => {
-                            self.resolve_function(params, body, FunctionType::Method);
+                        Stmt::Function { name, params, body } => {
+                            self.resolve_function(
+                                params,
+                                body,
+                                if name.lexeme == "init" {
+                                    FunctionType::Initializer
+                                } else {
+                                    FunctionType::Method
+                                },
+                            );
                         }
                         _ => self.errors.push(ResolveError {
                             line: Some(name.line),
@@ -136,6 +141,13 @@ impl<'a> Resolver<'a> {
                 }
 
                 if let Some(value) = value {
+                    if self.current_function == FunctionType::Initializer {
+                        self.errors.push(ResolveError {
+                            line: Some(keyword.line),
+                            place: Some(keyword.lexeme.clone()),
+                            msg: "Can't return value from an initializer".to_string(),
+                        });
+                    }
                     self.resolve_expr(value);
                 }
             }
