@@ -1,10 +1,11 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, rc::Rc};
 
 use crate::value::Value;
 
 #[derive(Debug)]
 pub struct Class {
     pub name: String,
+    superclass: Option<Rc<Class>>,
     methods: HashMap<String, Value>,
 }
 
@@ -15,9 +16,10 @@ impl std::fmt::Display for Class {
 }
 
 impl Class {
-    pub fn new(name: &str, methods: HashMap<String, Value>) -> Self {
+    pub fn new(name: &str, superclass: Option<Rc<Class>>, methods: HashMap<String, Value>) -> Self {
         Class {
             name: name.to_string(),
+            superclass,
             methods,
         }
     }

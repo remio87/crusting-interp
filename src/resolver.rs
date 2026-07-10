@@ -75,11 +75,31 @@ impl<'a> Resolver<'a> {
                 self.resolve_stmts(statements);
                 self.end_scope();
             }
-            Stmt::Class { name, methods } => {
+            Stmt::Class {
+                name,
+                superclass,
+                methods,
+            } => {
                 let enclosing_class = self.current_class;
                 self.current_class = ClassType::Class;
                 self.declare(name);
                 self.define(name);
+
+                if let Some(superclass) = superclass {
+                    match superclass {
+                        Expr::Variable { name: sc_name } => {
+                            if name.lexeme == sc_name.lexeme {
+                                self.errors.push(ResolveError {
+                                    line: Some(sc_name.line),
+                                    place: Some(sc_name.lexeme.clone()),
+                                    msg: "A class can't inherit from itself.".to_string(),
+                                });
+                            }
+                            self.resolve_expr(superclass);
+                        }
+                        _ => unreachable!(),
+                    }
+                }
 
                 self.begin_scope();
                 self.scopes

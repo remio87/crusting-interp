@@ -126,7 +126,25 @@ impl Interpreter {
                 )))));
                 self.execute_block(statements, environment)
             }
-            Stmt::Class { name, methods } => {
+            Stmt::Class {
+                name,
+                superclass,
+                methods,
+            } => {
+                let superclass = superclass
+                    .as_ref()
+                    .map(|expr| self.eval(expr))
+                    .transpose()?
+                    .map(|value| match value {
+                        Value::LoxClass(c) => Ok(c),
+                        _ => Err(EvalError::RuntimeError {
+                            line: Some(name.line),
+                            place: Some(name.lexeme.clone()),
+                            msg: "Superclass must be a class.".to_string(),
+                        }),
+                    })
+                    .transpose()?;
+
                 self.environment
                     .borrow_mut()
                     .define(name.lexeme.to_string(), Value::Nil);
@@ -154,7 +172,11 @@ impl Interpreter {
                     }
                 }
 
-                let class = Value::LoxClass(Rc::new(Class::new(name.lexeme.as_ref(), methods_map)));
+                let class = Value::LoxClass(Rc::new(Class::new(
+                    name.lexeme.as_ref(),
+                    superclass,
+                    methods_map,
+                )));
                 self.environment
                     .borrow_mut()
                     .assign(name.lexeme.to_string(), class)
