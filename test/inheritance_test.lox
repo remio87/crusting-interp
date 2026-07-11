@@ -1,0 +1,69 @@
+// a subclass instance can call a method defined only on the superclass
+class Animal {
+  speak() {
+    return "...";
+  }
+}
+class Dog < Animal {}
+var d = Dog();
+print d.speak(); // ...
+
+// a method defined on the subclass overrides the superclass's version
+class Cat < Animal {
+  speak() {
+    return "meow";
+  }
+}
+var c = Cat();
+print c.speak(); // meow
+
+// method lookup walks multiple levels up the inheritance chain
+class A {
+  greet() {
+    return "hello from A";
+  }
+}
+class B < A {}
+class C < B {}
+var obj = C();
+print obj.greet(); // hello from A
+
+// a subclass with no init() inherits the superclass's init()
+class Point {
+  init(x, y) {
+    this.x = x;
+    this.y = y;
+  }
+  sum() {
+    return this.x + this.y;
+  }
+}
+class Point3D < Point {}
+var p = Point3D(1, 2);
+print p.x;    // 1
+print p.y;    // 2
+print p.sum(); // 3
+
+// a subclass's own init() overrides the superclass's, and does NOT
+// automatically run the superclass's init() (no super.init() support yet)
+class Base {
+  init() {
+    this.base = "base";
+  }
+}
+class Derived < Base {
+  init() {
+    this.derived = "derived";
+  }
+}
+var derived = Derived();
+print derived.derived; // derived
+// derived.base was never set, since Derived.init() doesn't call super.init():
+// print derived.base; // Undefined property 'base'
+
+// looking up a method that exists on neither the class nor any
+// ancestor is still a runtime error, left commented out rather than executed:
+// class Empty {}
+// class EmptySub < Empty {}
+// EmptySub().nope();
+// Undefined property 'nope'
