@@ -538,6 +538,14 @@ impl Parser {
                         .expect("Literal value must be Some"),
                 })
             }
+            TokenType::Super => {
+                let keyword = self.previous().clone();
+                self.consume(TokenType::Dot, "Expect '.' after 'super'.")?;
+                let method = self
+                    .consume(TokenType::Identifier, "Expect superclass method name.")?
+                    .clone();
+                Ok(Expr::Super { keyword, method })
+            }
             TokenType::This => {
                 self.advance();
                 Ok(Expr::This {

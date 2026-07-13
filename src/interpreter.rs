@@ -149,6 +149,15 @@ impl Interpreter {
                     .borrow_mut()
                     .define(name.lexeme.to_string(), Value::Nil);
 
+                if let Some(superclass) = superclass.as_ref() {
+                    self.environment = Rc::new(RefCell::new(Environment::new(Some(Rc::clone(
+                        &self.environment,
+                    )))));
+                    self.environment
+                        .borrow_mut()
+                        .define("super".to_string(), Value::LoxClass(Rc::clone(superclass)));
+                }
+
                 let mut methods_map: HashMap<String, Value> = HashMap::new();
                 for method in methods {
                     match method {
@@ -174,9 +183,13 @@ impl Interpreter {
 
                 let class = Value::LoxClass(Rc::new(Class::new(
                     name.lexeme.as_ref(),
-                    superclass,
+                    superclass.clone(),
                     methods_map,
                 )));
+                if superclass.is_some() {
+                    let enclosing = self.environment.borrow().enclosing.clone().unwrap();
+                    self.environment = enclosing;
+                }
                 self.environment
                     .borrow_mut()
                     .assign(name.lexeme.to_string(), class)
@@ -511,6 +524,39 @@ impl Interpreter {
                     }),
                 }
             }
+            Expr::Super { keyword, method } => match self.locals.get(&(expr as *const Expr)) {
+                Some(&distance) => {
+                    Environment::get_at(Rc::clone(&self.environment), distance, "super")
+                        .and_then(|superclass| {
+                            let Value::LoxClass(superclass) = superclass else {
+                                unreachable!()
+                            };
+                            match Environment::get_at(
+                                Rc::clone(&self.environment),
+                                distance - 1,
+                                "this",
+                            )? {
+                                Value::LoxInstance(object) => {
+                                    let method = superclass
+                                        .find_method(&method.lexeme)
+                                        .ok_or("Method not found.".to_string())?;
+                                    Ok(method.bind(object))
+                                }
+                                _ => unreachable!(),
+                            }
+                        })
+                        .map_err(|_| EvalError::RuntimeError {
+                            line: Some(keyword.line),
+                            place: Some(keyword.lexeme.clone()),
+                            msg: "Failed to find method.".to_string(),
+                        })
+                }
+                None => Err(EvalError::RuntimeError {
+                    line: Some(keyword.line),
+                    place: Some(keyword.lexeme.clone()),
+                    msg: "No environment distance obtained.".to_string(),
+                }),
+            },
             Expr::This { keyword } => self.look_up_variable(keyword, expr),
             Expr::Unary { operator, right } => {
                 let right = self.eval(right)?;

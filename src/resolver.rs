@@ -96,6 +96,11 @@ impl<'a> Resolver<'a> {
                                 });
                             }
                             self.resolve_expr(superclass);
+                            self.begin_scope();
+                            self.scopes
+                                .last_mut()
+                                .unwrap()
+                                .insert("super".to_string(), true);
                         }
                         _ => unreachable!(),
                     }
@@ -129,6 +134,9 @@ impl<'a> Resolver<'a> {
                 }
 
                 self.end_scope();
+                if superclass.is_some() {
+                    self.end_scope();
+                }
                 self.current_class = enclosing_class;
             }
             Stmt::Expression { expression } => {
@@ -234,6 +242,9 @@ impl<'a> Resolver<'a> {
             } => {
                 self.resolve_expr(object);
                 self.resolve_expr(value);
+            }
+            Expr::Super { keyword, method: _ } => {
+                self.resolve_local(expr, keyword);
             }
             Expr::This { keyword } => {
                 if self.current_class == ClassType::None {
