@@ -1,0 +1,84 @@
+// super.method() calls the superclass's version of an overridden method
+class Animal {
+  speak() {
+    return "...";
+  }
+}
+class Dog < Animal {
+  speak() {
+    return super.speak() + " woof";
+  }
+}
+print Dog().speak(); // ... woof
+
+// super.init(...) lets a subclass explicitly chain into the
+// superclass's initializer instead of duplicating its logic
+class Point {
+  init(x, y) {
+    this.x = x;
+    this.y = y;
+  }
+  sum() {
+    return this.x + this.y;
+  }
+}
+class Point3D < Point {
+  init(x, y, z) {
+    super.init(x, y);
+    this.z = z;
+  }
+  sum() {
+    return super.sum() + this.z;
+  }
+}
+var p = Point3D(1, 2, 3);
+print p.x;    // 1
+print p.y;    // 2
+print p.z;    // 3
+print p.sum(); // 6
+
+// super always refers to the superclass of the class where the
+// method is *defined*, not the runtime type of the receiver
+// (Dog and Cat both call Animal's version through Pet's override)
+class Pet {
+  describe() {
+    return "a pet";
+  }
+}
+class Dog2 < Pet {
+  describe() {
+    return super.describe() + " that barks";
+  }
+}
+class Puppy < Dog2 {}
+print Puppy().describe(); // a pet that barks
+
+// a three-level chain: super in the leaf class calls the middle
+// class, and if the middle class doesn't override the method,
+// method lookup on the superclass continues up to the grandparent
+class A {
+  greet() {
+    return "hello from A";
+  }
+}
+class B < A {}
+class C < B {
+  greet() {
+    return super.greet() + ", and C";
+  }
+}
+print C().greet(); // hello from A, and C
+
+// using 'super' outside of any class is a compile-time error,
+// left commented out rather than executed:
+// super.foo();
+// Can't use 'super' outside of a class.
+
+// using 'super' in a class with no superclass is also a
+// compile-time error, left commented out rather than executed:
+// class NoSuper {
+//   foo() {
+//     return super.foo();
+//   }
+// }
+// Can't use 'super' in a class with no superclass.

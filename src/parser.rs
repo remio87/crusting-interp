@@ -539,6 +539,7 @@ impl Parser {
                 })
             }
             TokenType::Super => {
+                self.advance();
                 let keyword = self.previous().clone();
                 self.consume(TokenType::Dot, "Expect '.' after 'super'.")?;
                 let method = self

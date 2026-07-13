@@ -45,7 +45,8 @@ print p.y;    // 2
 print p.sum(); // 3
 
 // a subclass's own init() overrides the superclass's, and does NOT
-// automatically run the superclass's init() (no super.init() support yet)
+// automatically run the superclass's init() unless it explicitly
+// calls super.init() (see super_test.lox for that case)
 class Base {
   init() {
     this.base = "base";

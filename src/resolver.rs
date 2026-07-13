@@ -32,6 +32,7 @@ enum FunctionType {
 enum ClassType {
     None,
     Class,
+    Subclass,
 }
 
 pub struct Resolver<'a> {
@@ -86,6 +87,7 @@ impl<'a> Resolver<'a> {
                 self.define(name);
 
                 if let Some(superclass) = superclass {
+                    self.current_class = ClassType::Subclass;
                     match superclass {
                         Expr::Variable { name: sc_name } => {
                             if name.lexeme == sc_name.lexeme {
@@ -245,6 +247,19 @@ impl<'a> Resolver<'a> {
             }
             Expr::Super { keyword, method: _ } => {
                 self.resolve_local(expr, keyword);
+                match self.current_class {
+                    ClassType::None => self.errors.push(ResolveError {
+                        line: Some(keyword.line),
+                        place: Some(keyword.lexeme.clone()),
+                        msg: "Can't use 'super' outside of a class.".to_string(),
+                    }),
+                    ClassType::Subclass => {}
+                    ClassType::Class => self.errors.push(ResolveError {
+                        line: Some(keyword.line),
+                        place: Some(keyword.lexeme.clone()),
+                        msg: "Can't use 'super' in a class with no superclass.".to_string(),
+                    }),
+                }
             }
             Expr::This { keyword } => {
                 if self.current_class == ClassType::None {
